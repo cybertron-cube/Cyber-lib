@@ -1,0 +1,38 @@
+public static async Task ExtractToDirectoryProgressAsync(string pathZip, string pathDestination, IProgress<double> progress, CancellationToken cancellationToken = default)
+        {
+            using (ZipArchive archive = ZipFile.OpenRead(pathZip))
+            {
+                long totalLength = archive.Entries.Sum(entry => entry.Length);
+                long currentProgression = 0;
+                int firstEntryCount = 0;
+
+                //check if there is only one root folder, if so then skip making that folder
+                var rootDirEntries = archive.Entries.Where(x => (x.FullName.EndsWith('/') || x.FullName.EndsWith('\\')) && (x.FullName.Count(x => x == '/' || x == '\\') == 1));
+                if (rootDirEntries.Count() == 1)
+                {
+                    firstEntryCount = rootDirEntries.Single().FullName.Length;
+                }
+                else rootDirEntries = null;
+
+                foreach (var entry in archive.Entries.Where(x => x != rootDirEntries))
+                {
+                    // Check if entry is a folder
+                    string filePath = Path.Combine(pathDestination, entry.FullName[firstEntryCount..]);
+                    if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                    {
+                        Directory.CreateDirectory(filePath);
+                        continue;
+                    }
+
+                    // Create folder anyway since a folder may not have an entry
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                    using (var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var entryStream = entry.Open())
+                    {
+                        var relativeProgress = new Progress<long>(fileProgressBytes => progress.Report((double)(fileProgressBytes + currentProgression) / totalLength));
+                        await entryStream.CopyToAsync(file, 81920, relativeProgress, cancellationToken);
+                    }
+                    currentProgression += entry.Length;
+                }
+            }
+        }

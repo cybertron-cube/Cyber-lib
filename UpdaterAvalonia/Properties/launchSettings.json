@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "UpdaterAvalonia": {
+      "commandName": "Project"
+    },
+    "Params": {
+      "commandName": "Project",
+      "commandLineArgs": "https://github.com/Blitznir/FFmpegAvalonia/releases/download/1.0.0.4/win-x86.zip\r\nC:\\Users\\mbrem\\source\\repos\\FFmpegAvalonia\\FFmpegAvalonia\\bin\\Release\\net6.0\\publish\\win-x86\\\r\nC:\\Users\\mbrem\\source\\repos\\FFmpegAvalonia\\FFmpegAvalonia\\bin\\Release\\net6.0\\publish\\win-x86\\FFmpegAvalonia.exe\r\nprofiles.xml\r\nsettings.xml"
+    }
+  }
+}
