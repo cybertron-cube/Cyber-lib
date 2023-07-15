@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        Width="600" Height="100"
+		WindowStartupLocation="CenterScreen"
+		CanResize="False"
+        x:Class="UpdaterAvalonia.MainWindow"
+        Title="Cybertron Updater">
+	<StackPanel Name="UIPanel" VerticalAlignment="Center" Spacing="10" Margin="20, 10, 20, 20">
+		<TextBlock Name="UILabel" Text="" HorizontalAlignment="Center"/>
+		<ProgressBar Name="UIProgress" Foreground="Blue" Minimum="0" Maximum="1" Height="10"/>
+	</StackPanel>
+</Window>
