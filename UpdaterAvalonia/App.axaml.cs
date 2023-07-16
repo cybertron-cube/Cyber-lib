@@ -102,12 +102,12 @@ namespace UpdaterAvalonia
                     }
                     if (args.Args.Length > 3)
                     {
-                        mainWindow.Ignorables = ignore.Concat(args.Args[4..]).ToList();
+                        mainWindow.Preservables = ignore.Concat(args.Args[4..]).ToList();
                     }
                     else
                     {
 
-                        mainWindow.Ignorables = ignore.ToList();
+                        mainWindow.Preservables = ignore.ToList();
                     }
                 };
 #endif
