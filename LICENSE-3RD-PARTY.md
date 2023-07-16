@@ -344,7 +344,7 @@ https://github.com/flutter/flutter
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#Newtonsoft.Json
+# Newtonsoft.Json
 The MIT License (MIT)
 
 Copyright (c) 2007 James Newton-King
