@@ -98,19 +98,20 @@ namespace UpdaterAvalonia
                         mainWindow.DownloadLink = args.Args[0];
                         mainWindow.ExtractDestPath = args.Args[1];
                         mainWindow.AppToLaunchPath = args.Args[2];
+                        mainWindow.WildcardPreserves = args.Args[3].Split(';');
                     }
                     if (args.Args.Length > 3)
                     {
-                        mainWindow.Ignorables = ignore.Concat(args.Args[3..]).ToArray();
+                        mainWindow.Ignorables = ignore.Concat(args.Args[4..]).ToList();
                     }
                     else
                     {
 
-                        mainWindow.Ignorables = ignore;
+                        mainWindow.Ignorables = ignore.ToList();
                     }
                 };
 #endif
-                }
+            }
 
             base.OnFrameworkInitializationCompleted();
         }

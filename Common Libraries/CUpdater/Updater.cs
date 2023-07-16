@@ -91,7 +91,7 @@ namespace Cybertron.CUpdater
             }
         }
 
-        public static void StartUpdater(string updaterPath, string downloadLink, string extractDestination, IEnumerable<string> preservables)
+        public static void StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables)
         {
             string appToLaunch;
             using (var thisProcess = Process.GetCurrentProcess())
@@ -107,6 +107,7 @@ namespace Cybertron.CUpdater
             processStartInfo.ArgumentList.Add(downloadLink);
             processStartInfo.ArgumentList.Add(extractDestination);
             processStartInfo.ArgumentList.Add(appToLaunch);
+            processStartInfo.ArgumentList.Add(wildCardPreserve);
             foreach (var preservable in preservables)
             {
                 processStartInfo.ArgumentList.Add(preservable);

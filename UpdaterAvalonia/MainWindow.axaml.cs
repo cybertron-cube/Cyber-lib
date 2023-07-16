@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Cybertron.CUpdater;
 using System.Diagnostics;
@@ -18,7 +19,8 @@ public partial class MainWindow : Window
     public string DownloadLink;
     public string ExtractDestPath;
     public string AppToLaunchPath;
-    public string[] Ignorables;
+    public string[] WildcardPreserves;
+    public List<string> Preservables;
     public MainWindow()
     {
         InitializeComponent();
@@ -38,9 +40,22 @@ public partial class MainWindow : Window
     {
         try
         {
+            var dirInfo = new DirectoryInfo(ExtractDestPath);
+            if (WildcardPreserves[0] != string.Empty)
+            {
+                foreach (var searchPattern in WildcardPreserves)
+                {
+                    var addFiles = dirInfo.EnumerateFiles(searchPattern, SearchOption.AllDirectories);
+                    foreach (var addFile in addFiles)
+                    {
+                        Preservables.Add(GenStatic.GetRelativePathFromFull(ExtractDestPath, addFile.FullName));
+                    }
+                }
+            }
+            
             string debug = DownloadLink + Environment.NewLine + DownloadPath + Environment.NewLine
             + ExtractDestPath + Environment.NewLine + AppToLaunchPath + Environment.NewLine
-            + "--IGNORABLES--" + Environment.NewLine + String.Join(Environment.NewLine, Ignorables);
+            + "--IGNORABLES--" + Environment.NewLine + String.Join(Environment.NewLine, Preservables);
 
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "updater.log"), debug);
 
@@ -50,8 +65,7 @@ public partial class MainWindow : Window
 
             //Remove files that aren't in preservables
             UILabel.Text = "Removing files...";
-            var dirInfo = new DirectoryInfo(ExtractDestPath);
-            var intersect = dirInfo.EnumerateFiles().ExceptBy(Ignorables, x => x.Name);
+            var intersect = dirInfo.EnumerateFiles().ExceptBy(Preservables, x => x.Name);
             int total = intersect.Count();
             int current = 0;
             foreach (var file in intersect)
@@ -67,7 +81,7 @@ public partial class MainWindow : Window
             await updater.ExtractToDirectoryProgressAsync(
                 DownloadPath,
                 ExtractDestPath,
-                Ignorables,
+                Preservables,
                 new Progress<double>(x => UIProgress.Value = x));
 
             //Remove zip file, start process, then exit
@@ -91,11 +105,26 @@ public partial class MainWindow : Window
         string downloadPath = @"A:\CyberPlayerMPV\build\win-x64-multi.zip";
         ExtractDestPath = @"A:\CyberPlayerMPV\build\win-x64-multi";
         AppToLaunchPath = @"A:\CyberPlayerMPV\build\win-x64-multi\CyberVideoPlayer.exe";
-        Ignorables = new[] { "settings.json", @"updater\CybertronUpdater.exe", @"updater\av_libglesv2.dll", @"updater\libHarfBuzzSharp.dll", @"updater\libSkiaSharp.dll" };
-
+        Preservables = new[] { "settings.json", @"updater\CybertronUpdater.exe", @"updater\av_libglesv2.dll", @"updater\libHarfBuzzSharp.dll", @"updater\libSkiaSharp.dll" }.ToList();
+        WildcardPreserves = new[] { "*.log" };
+        
+        
+        var dirInfo = new DirectoryInfo(ExtractDestPath);
+        if (WildcardPreserves[0] != string.Empty)
+        {
+            foreach (var searchPattern in WildcardPreserves)
+            {
+                var addFiles = dirInfo.EnumerateFiles(searchPattern, SearchOption.AllDirectories);
+                foreach (var addFile in addFiles)
+                {
+                    Preservables.Add(GenStatic.GetRelativePathFromFull(ExtractDestPath, addFile.FullName));
+                }
+            }
+        }
+        
         string debug = DownloadLink + Environment.NewLine + DownloadPath + Environment.NewLine
             + ExtractDestPath + Environment.NewLine + AppToLaunchPath + Environment.NewLine
-            + "IGNORABLES" + Environment.NewLine + String.Join(Environment.NewLine, Ignorables);
+            + "IGNORABLES" + Environment.NewLine + String.Join(Environment.NewLine, Preservables);
         File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "updater.log"), debug);
 
         //UILabel.Text = "Downloading update...";
@@ -103,8 +132,7 @@ public partial class MainWindow : Window
 
         //Remove files that aren't in preservables
         UILabel.Text = "Removing files...";
-        var dirInfo = new DirectoryInfo(ExtractDestPath);
-        var intersect = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories).Where(x => !Ignorables.Any(y => y == GenStatic.GetRelativePathFromFull(ExtractDestPath, x.FullName)));
+        var intersect = dirInfo.EnumerateFiles("*", SearchOption.AllDirectories).Where(x => !Preservables.Any(y => y == GenStatic.GetRelativePathFromFull(ExtractDestPath, x.FullName)));
         int total = intersect.Count();
         int current = 0;
         foreach (var file in intersect)
@@ -120,7 +148,7 @@ public partial class MainWindow : Window
         await updater.ExtractToDirectoryProgressAsync(
             downloadPath,
             ExtractDestPath,
-            Ignorables,
+            Preservables,
             new Progress<double>(x => UIProgress.Value = x));
         UILabel.Text = "Deleting temporary install files...";
         UIProgress.IsVisible = false;
