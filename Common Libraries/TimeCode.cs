@@ -191,7 +191,34 @@ public partial class TimeCode
                                + _minutes * 60
                                + _seconds
                                + (double)_milliseconds / 1000,
-            TimeUnit.Millisecond => _milliseconds,
+            TimeUnit.Millisecond => _hours * 3600000
+                                    + _minutes * 60000
+                                    + _seconds * 1000
+                                    + _milliseconds,
+            _ => throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null)
+        };
+    }
+    
+    public static double GetExactUnits(TimeUnit timeUnit, string timeCode)
+    {
+        return timeUnit switch
+        {
+            TimeUnit.Hour => int.Parse(timeCode.Substring(0, 2))
+                             + double.Parse(timeCode.Substring(3, 2)) / 60
+                             + double.Parse(timeCode.Substring(6, 2)) / 3600
+                             + double.Parse(timeCode.Substring(9, 3)) / 3600000,
+            TimeUnit.Minute => int.Parse(timeCode.Substring(0, 2)) * 60
+                               + int.Parse(timeCode.Substring(3, 2))
+                               + double.Parse(timeCode.Substring(6, 2)) / 60
+                               + double.Parse(timeCode.Substring(9, 3)) / 60000,
+            TimeUnit.Second => int.Parse(timeCode.Substring(0, 2)) * 3600
+                               + int.Parse(timeCode.Substring(3, 2)) * 60
+                               + int.Parse(timeCode.Substring(6, 2))
+                               + double.Parse(timeCode.Substring(9, 3)) / 1000,
+            TimeUnit.Millisecond => int.Parse(timeCode.Substring(0, 2)) * 3600000
+                                    + int.Parse(timeCode.Substring(3, 2)) * 60000
+                                    + int.Parse(timeCode.Substring(6, 2)) * 1000
+                                    + int.Parse(timeCode.Substring(9, 3)),
             _ => throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null)
         };
     }
