@@ -144,4 +144,33 @@ public static class GenStatic
             IncrementFileName(ref file);
         }
     }
+    
+    /// <summary>
+    /// Opens a weblink with the default browser assigned on the system
+    /// </summary>
+    /// <param name="url"></param>
+    public static void OpenWebLink(string url)
+    {
+        try
+        {
+            Process.Start(url);
+        }
+        catch
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                url = url.Replace("&", "^&");
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", url);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", url);
+            }
+            else throw;
+        }
+    }
 }
