@@ -26,6 +26,7 @@ public static class GenStatic
             }
         }
     }
+    
     public static string GetOSRespectiveExecutablePath(string path)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -44,10 +45,12 @@ public static class GenStatic
         }
         return path;
     }
+    
     public static void ReplaceWinNewLine(ref string str)
     {
         str = str.Replace("\r\n", "\n");
     }
+    
     public static Process GetOSRespectiveTerminalProcess(ProcessStartInfo processStartInfo)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -69,6 +72,7 @@ public static class GenStatic
         };
         return terminalProcess;
     }
+    
     public static Process GetOSRespectiveTerminalProcess()
     {
         var processStartInfo = new ProcessStartInfo();
@@ -80,6 +84,7 @@ public static class GenStatic
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
         return relPath == null ? basePath : Path.Combine(basePath, relPath);
     }
+    
     public static string GetRelativePathFromFull(string baseDirPath, string fullPath)
     {
         if (Path.EndsInDirectorySeparator(baseDirPath))
@@ -91,14 +96,17 @@ public static class GenStatic
             return fullPath.Replace(baseDirPath + Path.DirectorySeparatorChar, "");
         }
     }
+    
     public static void AppendFileName(ref string filePath, string appendage)
     {
         filePath = filePath.Replace(Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
     }
+    
     public static string AppendFileName(string filePath, string appendage)
     {
         return filePath.Replace(Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
     }
+    
     public static void IncrementFileName(ref string file)
     {
         string fileNameWithoutExt = Path.GetFileNameWithoutExtension(file);
@@ -112,6 +120,7 @@ public static class GenStatic
             file = file.Replace(Path.GetFileName(file), $"{Path.GetFileNameWithoutExtension(file)}{1}{Path.GetExtension(file)}");
         }
     }
+    
     public static int GetStartIndexOfEndingDigits(string str)
     {
         for (int i = str.Length - 1; i >= 0; i--)
@@ -127,6 +136,7 @@ public static class GenStatic
         }
         throw new ArgumentException("The string does not contain any digits");
     }
+    
     public static void IncrementFileNameUntilAvailable(ref string file)
     {
         while (File.Exists(file))
