@@ -405,3 +405,4 @@ Packager/
 build/
 Common\ Libraries/notes.txt
 test.bat
+.DS_Store
