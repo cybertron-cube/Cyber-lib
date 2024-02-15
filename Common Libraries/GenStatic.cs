@@ -99,12 +99,28 @@ public static class GenStatic
     
     public static void AppendFileName(ref string filePath, string appendage)
     {
-        filePath = filePath.Replace(Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
+        filePath = ReplaceLastOccurrence(filePath, Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
     }
     
     public static string AppendFileName(string filePath, string appendage)
     {
-        return filePath.Replace(Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
+        return ReplaceLastOccurrence(filePath, Path.GetFileName(filePath), $"{Path.GetFileNameWithoutExtension(filePath)}{appendage}{Path.GetExtension(filePath)}");
+    }
+
+    public static string ChangeExtension(string filePath, string newExtension)
+    {
+        if (!newExtension.StartsWith('.')) newExtension = '.' + newExtension;
+
+        var oldExtension = Path.GetExtension(filePath);
+
+        if (oldExtension == string.Empty) return filePath + newExtension;
+        return ReplaceLastOccurrence(filePath, Path.GetExtension(filePath), newExtension);
+    }
+
+    public static string ReplaceLastOccurrence(string source, string oldValue, string newValue, StringComparison stringComparison = StringComparison.Ordinal)
+    {
+        var place = source.LastIndexOf(oldValue, stringComparison);
+        return place == -1 ? source : source.Remove(place, oldValue.Length).Insert(place, newValue);
     }
     
     public static void IncrementFileName(ref string file)
