@@ -9,33 +9,10 @@ namespace Cybertron.CUpdater
     public class Updater
     {
         public event Action<string>? OnNextFile;
+
+        public record struct CheckUpdateResult(bool UpdateAvailable, string TagName = "", string Name = "",
+            string DownloadLink = "", string Body = "");
         
-        public struct CheckUpdateResult
-        {
-            public bool UpdateAvailable;
-            public string TagName;
-            public string Name;
-            public string? DownloadLink;
-            public string Body;
-            public CheckUpdateResult(bool updateAvailable, string tagName, string name, string downloadLink, string body)
-            {
-                UpdateAvailable = updateAvailable;
-                TagName = tagName;
-                Name = name;
-                DownloadLink = downloadLink;
-                Body = body;
-            }
-            public CheckUpdateResult(bool updateAvailable)
-            {
-                UpdateAvailable = updateAvailable;
-                TagName = string.Empty;
-                Name = string.Empty;
-                DownloadLink = string.Empty;
-                Body = string.Empty;
-            }
-        }
-        
-        //TODO should have a way to supply your own comparison method use func<string, string, bool> as param
         //TODO have option for target_commitish (branch name)
         /// <summary>
         /// Retrieves the <see cref="GithubRelease"/> from github,
