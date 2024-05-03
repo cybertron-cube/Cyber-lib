@@ -7,16 +7,13 @@ public static class ExtensionMethods
 {
     public static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long>? progress = null, CancellationToken cancellationToken = default)
     {
-        if (source == null)
-            throw new ArgumentNullException(nameof(source));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
         if (!source.CanRead)
             throw new ArgumentException("Has to be readable", nameof(source));
-        if (destination == null)
-            throw new ArgumentNullException(nameof(destination));
         if (!destination.CanWrite)
             throw new ArgumentException("Has to be writable", nameof(destination));
-        if (bufferSize < 0)
-            throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
         var buffer = new byte[bufferSize];
         long totalBytesRead = 0;
@@ -28,6 +25,7 @@ public static class ExtensionMethods
             progress?.Report(totalBytesRead);
         }
     }
+    
     public static void DisposeAndClear(this List<IDisposable> list)
     {
         foreach (var disposable in CollectionsMarshal.AsSpan<IDisposable>(list))
@@ -36,6 +34,7 @@ public static class ExtensionMethods
         }
         list.Clear();
     }
+    
     public static string CapitalizeFirstLetter(this string str)
     {
         return char.ToUpper(str[0]) + str[1..];
@@ -53,6 +52,7 @@ public static class ExtensionMethods
 
         return true;
     }
+    
     public static bool EndsWith(this StringBuilder haystack, string needle)
     {
         if (haystack.Length == 0 || needle.Length == 0 || needle.Length > haystack.Length)
@@ -70,6 +70,7 @@ public static class ExtensionMethods
         }
         return true;
     }
+    
     private static bool ContainsOrdinal(this StringBuilder haystack, string needle)
     {
         if (haystack.Length == 0 || needle.Length == 0 || needle.Length > haystack.Length)
@@ -100,10 +101,11 @@ public static class ExtensionMethods
                 }
                 return true;
             }
-        CONTINUE_OUTER:;
+            CONTINUE_OUTER:;
         }
         return false;
     }
+    
     private static bool ContainsOrdinalIgnoreCase(this StringBuilder haystack, string needle)
     {
         if (haystack.Length == 0 || needle.Length == 0 || needle.Length > haystack.Length)
@@ -134,10 +136,11 @@ public static class ExtensionMethods
                 }
                 return true;
             }
-        CONTINUE_OUTER:;
+            CONTINUE_OUTER:;
         }
         return false;
     }
+    
     public static bool Contains(this StringBuilder haystack, string needle, StringComparison stringComparison)
     {
         return stringComparison switch
@@ -147,10 +150,12 @@ public static class ExtensionMethods
             _ => throw new ArgumentException("Comparison rule not supported", nameof(stringComparison)),
         };
     }
+    
     public static bool Contains(this StringBuilder haystack, string needle)
     {
         return haystack.ContainsOrdinal(needle);
     }
+    
     public static StringBuilder ToLower(this StringBuilder sb)
     {
         StringBuilder returnSb = new();
@@ -160,14 +165,17 @@ public static class ExtensionMethods
         }
         return returnSb;
     }
+    
     public static void TrimEnd(this StringBuilder sb, string str)
     {
         sb.Remove(sb.Length - str.Length, str.Length);
     }
+    
     public static string ToStringTrimEnd(this StringBuilder sb, string trimEnd)
     {
         return sb.ToString(0, sb.Length - trimEnd.Length);
     }
+    
     public static bool ParseToBool(this string str)
     {
         return str.ToLower() switch
@@ -179,6 +187,7 @@ public static class ExtensionMethods
             _ => throw new Exception($"The string {str.ToLower()} could not be parsed to bool"),
         };
     }
+    
     public static bool? TryParseToBool(this string str, out string returnStr)
     {
         returnStr = str;
@@ -189,6 +198,7 @@ public static class ExtensionMethods
             _ => null,
         };
     }
+    
     public static bool NullIsFalse(this bool? boolean)
     {
         return boolean switch
@@ -198,14 +208,17 @@ public static class ExtensionMethods
             _ => false
         };
     }
+    
     public static bool IsEven(this int val)
     {
-        if (val % 2 == 0) return true; return false;
+        return val % 2 == 0;
     }
+    
     public static string Combine(this string[] stringArray)
     {
-        return String.Join("", stringArray);
+        return string.Join("", stringArray);
     }
+    
     public static void Rename(this FileInfo file, string newName)
     {
         if (file.Directory is not null)
@@ -213,6 +226,7 @@ public static class ExtensionMethods
             file.MoveTo(Path.Combine(file.Directory.FullName, newName));
         }
     }
+    
     public static string GetNameWithoutExtension(this FileInfo file)
     {
         return Path.GetFileNameWithoutExtension(file.FullName);
