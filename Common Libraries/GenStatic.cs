@@ -189,4 +189,42 @@ public static class GenStatic
             else throw;
         }
     }
+    
+    public static bool ExecuteAndRetry(Action work, Action<Exception>? onCaughtException = null, int retryCount = 2, int delay = 100)
+    {
+        for (int i = 0; i < retryCount; i++)
+        {
+            try
+            {
+                work.Invoke();
+                return true;
+            }
+            catch (Exception e)
+            {
+                onCaughtException?.Invoke(e);
+                Thread.Sleep(delay);
+            }
+        }
+
+        return false;
+    }
+    
+    public static async Task<bool> ExecuteAndRetryAsync(Action work, Action<Exception>? onCaughtException = null, int retryCount = 2, int delay = 100)
+    {
+        for (int i = 0; i < retryCount; i++)
+        {
+            try
+            {
+                work.Invoke();
+                return true;
+            }
+            catch (Exception e)
+            {
+                onCaughtException?.Invoke(e);
+                await Task.Delay(delay);
+            }
+        }
+
+        return false;
+    }
 }
