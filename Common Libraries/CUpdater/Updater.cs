@@ -11,7 +11,7 @@ namespace Cybertron.CUpdater
         public event Action<string>? OnNextFile;
 
         public record struct CheckUpdateResult(bool UpdateAvailable, string TagName = "", string Name = "",
-            string DownloadLink = "", string Body = "");
+            string? DownloadLink = "", string Body = "");
         
         //TODO have option for target_commitish (branch name)
         /// <summary>
