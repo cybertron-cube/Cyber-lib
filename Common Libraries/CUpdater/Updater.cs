@@ -21,37 +21,39 @@ namespace Cybertron.CUpdater
         /// </summary>
         /// <param name="appName">Github repo name/App name</param>
         /// <param name="assetIdentifiers">Strings to search for in each asset of the latest release</param>
-        /// <param name="url">The github api url, example: "https://api.github.com/repos/Blitznir/cyber-lib"</param>
+        /// <param name="url">The github api url, example: "https://api.github.com/repos/cybertron-cube/cyber-lib"</param>
         /// <param name="currentVersion"></param>
         /// <param name="client"></param>
         /// <param name="includePreReleases"></param>
         /// <returns> <see cref="CheckUpdateResult"/> </returns>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException">If the asset page contains more than one asset that contains the assetIdentifier string</exception>
-        /// <exception cref="NullReferenceException"></exception>
-        public static async Task<CheckUpdateResult> GithubCheckForUpdatesAsync(string appName, IEnumerable<string> assetIdentifiers, string url, string currentVersion, HttpClient client, bool includePreReleases = false)
+        /// <exception cref="NullReferenceException">Unable to properly create an IVersion instance from the received tag name</exception>
+        public static async Task<CheckUpdateResult> GithubCheckForUpdatesAsync<TVersion>(string appName, IEnumerable<string> assetIdentifiers, string url, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
         {
-            var latestRelease = await GetLatestGithubRelease(appName, url, client, includePreReleases, currentVersion);
-            var latestVersion = new Version(latestRelease.tag_name);
+            var latestRelease = await GetLatestGithubRelease(appName, url, currentVersion, client, includePreReleases);
+            var latestVersion = (TVersion?)Activator.CreateInstance(typeof(TVersion), latestRelease.tag_name);
+            if (latestVersion is null) throw new NullReferenceException($"Could not properly create an instance of your type, {typeof(TVersion)}, of version from string {latestRelease.tag_name}");
             
-            if (latestVersion.CompareTo(new Version(currentVersion)) > 0)
+            if (latestVersion.CompareTo(currentVersion) > 0)
             {
                 return new CheckUpdateResult(true,
                     latestRelease.tag_name,
                     latestRelease.name,
-                    latestRelease.assets.SingleOrDefault(x => x.name.Contains(assetIdentifiers))?.browser_download_url,
+                    latestRelease.assets.Single(x => x.name.Contains(assetIdentifiers)).browser_download_url,
                     latestRelease.body);
             }
-            else return new CheckUpdateResult(false);
+            
+            return new CheckUpdateResult(false);
         }
 
-        public static async Task<GithubRelease> GetLatestGithubRelease(string appName, string url, HttpClient client, bool includePreReleases = false, string? currentVersion = null)
+        public static async Task<GithubRelease> GetLatestGithubRelease<TVersion>(string appName, string url, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
         {
             url += includePreReleases ? "/releases?per_page=1" : "/releases/latest";
             string responseJson;
             using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
             {
-                requestMessage.Headers.UserAgent.Add(new ProductInfoHeaderValue(appName, currentVersion));
+                requestMessage.Headers.UserAgent.Add(new ProductInfoHeaderValue(appName, currentVersion.ToString()));
                 var response = await client.SendAsync(requestMessage);
                 response.EnsureSuccessStatusCode();
                 responseJson = await response.Content.ReadAsStringAsync();
@@ -60,11 +62,20 @@ namespace Cybertron.CUpdater
             if (includePreReleases)
             {
                 var latestReleases = JsonConvert.DeserializeObject<GithubRelease[]>(responseJson);
+                
+                if (latestReleases is null)
+                    throw new NullReferenceException($"Could not deserialize json from github, {responseJson}");
+                
                 return latestReleases[0];
             }
             else
             {
-                return JsonConvert.DeserializeObject<GithubRelease>(responseJson);
+                var latestRelease = JsonConvert.DeserializeObject<GithubRelease>(responseJson);
+                
+                if (latestRelease is null)
+                    throw new NullReferenceException($"Could not deserialize json from github, {responseJson}");
+                
+                return latestRelease;
             }
         }
 
