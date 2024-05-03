@@ -231,4 +231,12 @@ public static class ExtensionMethods
     {
         return Path.GetFileNameWithoutExtension(file.FullName);
     }
+    
+    public static void OnNextAll<T>(this List<IObserver<T>> observers, T nextVal)
+    {
+        foreach (var observer in observers)
+        {
+            observer.OnNext(nextVal);
+        }
+    }
 }
