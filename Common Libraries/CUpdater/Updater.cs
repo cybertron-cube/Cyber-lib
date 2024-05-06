@@ -86,11 +86,24 @@ namespace Cybertron.CUpdater
             {
                 appToLaunch = thisProcess.MainModule.FileName;
             }
-            
-            var processStartInfo = new ProcessStartInfo
+
+            ProcessStartInfo processStartInfo;
+            if (OperatingSystem.IsWindows())
             {
-                FileName = updaterPath
-            };
+                processStartInfo = new ProcessStartInfo
+                {
+                    FileName = updaterPath,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+            }
+            else
+            {
+                processStartInfo = new ProcessStartInfo
+                {
+                    FileName = updaterPath
+                };
+            }
 
             processStartInfo.ArgumentList.Add(downloadLink);
             processStartInfo.ArgumentList.Add(extractDestination);
