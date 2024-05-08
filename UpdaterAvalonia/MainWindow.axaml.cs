@@ -14,8 +14,8 @@ namespace UpdaterAvalonia;
 
 public partial class MainWindow : Window
 {
-    public HttpClient HttpClient = new();
-    public string DownloadPath = Path.GetTempFileName();
+    public readonly HttpClient HttpClient = new();
+    public readonly string DownloadPath = Path.GetTempFileName();
     public string DownloadLink;
     public string ExtractDestPath;
     public string AppToLaunchPath;
@@ -53,21 +53,22 @@ public partial class MainWindow : Window
                 }
             }
             
-            string debug = DownloadLink + Environment.NewLine + DownloadPath + Environment.NewLine
-            + ExtractDestPath + Environment.NewLine + AppToLaunchPath + Environment.NewLine
-            + "--IGNORABLES--" + Environment.NewLine + String.Join(Environment.NewLine, Preservables);
-
-            File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "updater.log"), debug);
-
+            var debug = DownloadLink + Environment.NewLine + DownloadPath + Environment.NewLine
+                        + ExtractDestPath + Environment.NewLine + AppToLaunchPath + Environment.NewLine
+                        + "--IGNORABLES--" + Environment.NewLine + string.Join(Environment.NewLine, Preservables);
+            
+            await File.WriteAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"), debug);
+            
             //Download the update (zip file)
             UILabel.Text = "Downloading update...";
-            await Updater.DownloadUpdatesProgressAsync(DownloadLink, DownloadPath, HttpClient, new ThreadSafeProgress<double>(x => UIProgress.Value = x));
-
+            await Updater.DownloadUpdatesProgressAsync(DownloadLink, DownloadPath, HttpClient,
+                new ThreadSafeProgress<double>(x => UIProgress.Value = x));
+            
             //Remove files that aren't in preservables
             UILabel.Text = "Removing files...";
             var intersect = dirInfo.EnumerateFiles().ExceptBy(Preservables, x => x.Name);
-            int total = intersect.Count();
-            int current = 0;
+            var total = intersect.Count();
+            var current = 0;
             foreach (var file in intersect)
             {
                 file.Delete();
@@ -89,13 +90,14 @@ public partial class MainWindow : Window
             UIProgress.IsVisible = false;
             File.Delete(DownloadPath);
             Process.Start(AppToLaunchPath);
-            this.Close(); 
+            Close(); 
         }
         catch (Exception ex)
         {
             File.Delete(DownloadPath);
-            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "updater.log"), Environment.NewLine + ex.ToString());
-            this.Close();
+            await File.AppendAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"),
+                Environment.NewLine + ex);
+            Close();
         }
     }
 #if DEBUG
@@ -159,8 +161,9 @@ public partial class MainWindow : Window
 #endif
     private void Updater_OnNextFile(string filePath)
     {
-        string text = $"Extracting {Path.GetFileName(filePath)} to {Path.GetDirectoryName(filePath)}";
-        File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "updater.log"), Environment.NewLine + text);
+        var text = $"Extracting {Path.GetFileName(filePath)} to {Path.GetDirectoryName(filePath)}";
+        File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"),
+            Environment.NewLine + text);
         UILabel.Text = text;
     }
 }
