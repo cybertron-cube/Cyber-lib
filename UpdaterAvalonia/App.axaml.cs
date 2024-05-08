@@ -8,7 +8,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace UpdaterAvalonia
 {
@@ -25,9 +24,8 @@ namespace UpdaterAvalonia
             {
                 desktop.MainWindow = new MainWindow();
 #if !DEBUG
-                MainWindow mainWindow = desktop.MainWindow as MainWindow;
-                var desktopLifetime = ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-                desktopLifetime!.Startup += (sender, args) =>
+                var mainWindow = desktop.MainWindow as MainWindow;
+                desktop.Startup += (sender, args) =>
                 {
                     if (args.Args.Length == 0)
                     {
@@ -66,7 +64,7 @@ namespace UpdaterAvalonia
 
                     //Could have conditional build configurations for below
                     string[] ignore;
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    if (OperatingSystem.IsWindows())
                     {
                         ignore = new string[4];
                         ignore[0] = GenStatic.GetRelativePathFromFull(baseDir, updaterExePath);
@@ -74,14 +72,14 @@ namespace UpdaterAvalonia
                         ignore[2] = GenStatic.GetRelativePathFromFull(baseDir, Path.Combine(updaterDir, "libHarfBuzzSharp.dll"));
                         ignore[3] = GenStatic.GetRelativePathFromFull(baseDir, Path.Combine(updaterDir, "libSkiaSharp.dll"));
                     }
-                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    else if (OperatingSystem.IsLinux())
                     {
                         ignore = new string[3];
                         ignore[0] = GenStatic.GetRelativePathFromFull(baseDir, updaterExePath);
                         ignore[1] = GenStatic.GetRelativePathFromFull(baseDir, Path.Combine(updaterDir, "libHarfBuzzSharp.so"));
                         ignore[2] = GenStatic.GetRelativePathFromFull(baseDir, Path.Combine(updaterDir, "libSkiaSharp.so"));
                     }
-                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    else if (OperatingSystem.IsMacOS())
                     {
                         ignore = new string[4];
                         ignore[0] = GenStatic.GetRelativePathFromFull(baseDir, updaterExePath);
@@ -100,6 +98,7 @@ namespace UpdaterAvalonia
                         mainWindow.AppToLaunchPath = args.Args[2];
                         mainWindow.WildcardPreserves = args.Args[3].Split(';');
                     }
+                    
                     if (args.Args.Length > 3)
                     {
                         mainWindow.Preservables = ignore.Concat(args.Args[4..]).ToList();
