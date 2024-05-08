@@ -84,12 +84,17 @@ public class Updater
 
     public static void StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables)
     {
-        string appToLaunch;
+        string? appToLaunch;
+        string procName;
         using (var thisProcess = Process.GetCurrentProcess())
         {
-            appToLaunch = thisProcess.MainModule.FileName;
+            procName = thisProcess.ProcessName;
+            appToLaunch = thisProcess.MainModule?.FileName;
         }
-
+        
+        if (appToLaunch is null)
+            throw new NullReferenceException("Could not obtain filename from process main module");
+        
         ProcessStartInfo processStartInfo;
         if (OperatingSystem.IsWindows())
         {
@@ -107,16 +112,12 @@ public class Updater
                 FileName = updaterPath
             };
         }
-
-        processStartInfo.ArgumentList.Add(downloadLink);
-        processStartInfo.ArgumentList.Add(extractDestination);
-        processStartInfo.ArgumentList.Add(appToLaunch);
-        processStartInfo.ArgumentList.Add(wildCardPreserve);
-        foreach (var preservable in preservables)
-        {
-            processStartInfo.ArgumentList.Add(preservable);
-        }
-
+        
+        var args = new UpdaterArgs(procName, updaterPath, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
+            preservables.ToListWithCast());
+        
+        ArgsHelper.AddToProcessStartInfo(ref processStartInfo, args);
+        
         Process.Start(processStartInfo);
     }
     
