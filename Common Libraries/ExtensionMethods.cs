@@ -240,4 +240,18 @@ public static class ExtensionMethods
             observer.OnNext(nextVal);
         }
     }
+    
+    /// <summary>
+    /// If the IEnumerable is already a List, cast instead of creating a new list object
+    /// </summary>
+    /// <param name="source"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public static List<T> ToListWithCast<T>(this IEnumerable<T> source)
+    {
+        if (source is List<T> list)
+            return list;
+        
+        return source.ToList();
+    }
 }
