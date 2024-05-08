@@ -11,16 +11,17 @@ public static class ExtensionMethods
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
         if (!source.CanRead)
-            throw new ArgumentException("Has to be readable", nameof(source));
+            throw new ArgumentException("Must be readable", nameof(source));
         if (!destination.CanWrite)
-            throw new ArgumentException("Has to be writable", nameof(destination));
-
+            throw new ArgumentException("Must be writable", nameof(destination));
+        
         var buffer = new byte[bufferSize];
         long totalBytesRead = 0;
         int bytesRead;
-        while ((bytesRead = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) != 0)
+        
+        while ((bytesRead = await source.ReadAsync(buffer, cancellationToken)) != 0)
         {
-            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
             totalBytesRead += bytesRead;
             progress?.Report(totalBytesRead);
         }

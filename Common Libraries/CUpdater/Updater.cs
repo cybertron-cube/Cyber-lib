@@ -3,6 +3,9 @@ using System.IO.Compression;
 using System.Net.Http.Headers;
 using Cybertron.CUpdater.Github;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Formats.Tar;
+using System.Runtime.Versioning;
 
 namespace Cybertron.CUpdater;
 
@@ -116,7 +119,7 @@ public class Updater
 
         Process.Start(processStartInfo);
     }
-
+    
     public static async Task DownloadUpdatesProgressAsync(string downloadLink, string destDir, HttpClient client, IProgress<double> progress)
     {
         using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, downloadLink))
@@ -129,48 +132,163 @@ public class Updater
             await downloadWithProgress.StartDownload(requestMessage);
         }
     }
-        
-    public async Task ExtractToDirectoryProgressAsync(string pathZip, string pathDestination, IEnumerable<string> ignorables, IProgress<double> progress, CancellationToken cancellationToken = default)
+    
+    /// <summary>
+    /// Extracts a compressed file to a directory with progress updates
+    /// </summary>
+    /// <param name="pathExtract">Path to the file to extract</param>
+    /// <param name="pathDestination">Path to the destination directory to extract contents</param>
+    /// <param name="ignorables">Files to ignore by name</param>
+    /// <param name="progress">Use a thread safe progress type for accuracy</param>
+    /// <param name="cancellationToken"></param>
+    /// <exception cref="PlatformNotSupportedException">GZip is not supported on windows</exception>
+    /// <exception cref="NotImplementedException"></exception>
+    public async Task ExtractToDirectoryProgressAsync(string pathExtract, string pathDestination, IEnumerable<string> ignorables, IProgress<double> progress, CancellationToken cancellationToken = default)
     {
-        using (ZipArchive archive = ZipFile.OpenRead(pathZip))
+        if (FileSignatures.IsZip(pathExtract))
+            await ExtractZipFileProgressAsync(pathExtract, pathDestination, ignorables, progress, cancellationToken);
+        else if (OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("The detected file type does not support extraction on windows");
+        else if (FileSignatures.IsGZip(pathExtract))
+            await ExtractGZipFileProgressAsync(pathExtract, pathDestination, ignorables, progress, cancellationToken);
+        else throw new NotImplementedException("Only Zip and GZip file extraction are currently implemented");
+    }
+    
+    public async Task ExtractZipFileProgressAsync(string pathZip, string pathDestination, IEnumerable<string> ignorables, IProgress<double> progress, CancellationToken cancellationToken = default)
+    {
+        using var archive = ZipFile.OpenRead(pathZip);
+        long currentProgression = 0;
+        var firstEntryCount = 0;
+        var entries = archive.Entries.Where(x => ignorables.All(y => x.FullName.Replace('\\', '/') != y.Replace('\\', '/'))).ToList();
+        var totalLength = entries.Sum(entry => (double)entry.Length);
+
+        //check if there is only one root folder, if so then skip making that folder
+        var rootDirEntries = entries.Where(x => (x.FullName.EndsWith('/') || x.FullName.EndsWith('\\')) && x.FullName.Count(c => c is '/' or '\\') == 1);
+        ZipArchiveEntry? rootDirEntry;
+        if (rootDirEntries.Count() == 1)
         {
-            long currentProgression = 0;
-            int firstEntryCount = 0;
-            var entries = archive.Entries.Where(x => !ignorables.Any(y => x.FullName.Replace('\\', '/') == y.Replace('\\', '/')));
-            long totalLength = entries.Sum(entry => entry.Length);
-
-            //check if there is only one root folder, if so then skip making that folder
-            var rootDirEntries = entries.Where(x => (x.FullName.EndsWith('/') || x.FullName.EndsWith('\\')) && (x.FullName.Count(x => x == '/' || x == '\\') == 1));
-            ZipArchiveEntry? rootDirEntry;
-            if (rootDirEntries.Count() == 1)
+            rootDirEntry = rootDirEntries.Single();
+            
+            // TODO TEST THIS CHANGE
+            if (entries.All(x => x.FullName.StartsWith(rootDirEntry.FullName)))
             {
-                rootDirEntry = rootDirEntries.Single();
                 firstEntryCount = rootDirEntry.FullName.Length;
-                entries = archive.Entries.Where(x => !ignorables.Any(y => x.FullName.Replace('\\', '/').Replace(rootDirEntry.FullName, "") == y.Replace('\\', '/')));
+                entries = archive.Entries.Where(x => ignorables.All(y =>
+                    x.FullName.Replace('\\', '/').Replace(rootDirEntry.FullName, "") != y.Replace('\\', '/'))).ToList();
             }
-            else rootDirEntry = null;
+        }
+        else rootDirEntry = null;
 
-            foreach (var entry in entries.Where(x => x != rootDirEntry))
+        foreach (var entry in entries.Where(x => x != rootDirEntry))
+        {
+            // Check if entry is a folder
+            var filePath = Path.Combine(pathDestination, entry.FullName[firstEntryCount..]);
+            if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
             {
-                // Check if entry is a folder
-                string filePath = Path.Combine(pathDestination, entry.FullName[firstEntryCount..]);
-                if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                Directory.CreateDirectory(filePath);
+                continue;
+            }
+                
+            OnNextFile?.Invoke(filePath);
+                
+            // Create folder anyway since a folder may not have an entry
+            var baseDir = Path.GetDirectoryName(filePath);
+            if (baseDir is not null)
+                Directory.CreateDirectory(baseDir);
+
+            await using (var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await using (var entryStream = entry.Open())
                 {
-                    Directory.CreateDirectory(filePath);
+                    var relativeProgress = new Progress<long>(fileProgressBytes => progress.Report((fileProgressBytes + currentProgression) / totalLength));
+                    await entryStream.CopyToAsync(file, 81920, relativeProgress, cancellationToken);
+                }
+            }
+            currentProgression += entry.Length;
+        }
+    }
+    
+    [UnsupportedOSPlatform("windows")]
+    public async Task ExtractGZipFileProgressAsync(string pathZip, string pathDestination, IEnumerable<string> ignorables, IProgress<double> progress, CancellationToken cancellationToken = default)
+    {
+        await using var fs = new FileStream(pathZip, FileMode.Open, FileAccess.Read);
+        await using var gzip = new GZipStream(fs, CompressionMode.Decompress);
+        await using var reader = new TarReader(gzip);
+        
+        var entries = new List<TarEntry>();
+        var rootDirEntries = new List<TarEntry>();
+        
+        while (await reader.GetNextEntryAsync(true, cancellationToken) is { } entry)
+        {
+            if (OperatingSystem.IsMacOS() && (Path.GetFileName(entry.Name).StartsWith("._") || Path.GetFileName(entry.Name).Equals(".ds_store", StringComparison.CurrentCultureIgnoreCase)))
+                continue;
+            
+            if (entry.Name.EndsWith('/') && entry.Name.Count(x => x == '/') == 1)
+            {
+                rootDirEntries.Add(entry);
+            }
+            
+            entries.Add(entry);
+        }
+
+        var rootDirEntryNameLength = 0;
+        if (rootDirEntries.Count == 1)
+        {
+            var rootDirEntry = rootDirEntries.Single();
+            
+            // Ensure all entries use root directory entry - reason: there could be root file entries
+            if (rootDirEntries.All(x => x.Name.StartsWith(rootDirEntry.Name)))
+            {
+                rootDirEntryNameLength = rootDirEntry.Name.Length;
+                entries.Remove(rootDirEntry);
+            }
+        }
+
+        long currentProgression = 0;
+        var totalLength = entries.Sum(entry => (double)entry.Length);
+        // ReSharper disable once AccessToModifiedClosure
+        var relativeProgress = new ThreadSafeProgress<long>(fileProgressBytes => 
+            progress.Report((fileProgressBytes + currentProgression) / totalLength));
+        
+        // Descending so directories come first - TODO will have to change if implementing new entry types
+        foreach (var entry in entries.OrderByDescending(x => x.EntryType)
+                     .ThenBy(x => x.Name.Count(c => c == '/')))
+        {
+            var path = Path.Combine(pathDestination,
+                rootDirEntryNameLength == 0 ? entry.Name : entry.Name[rootDirEntryNameLength..]);
+            
+            if (entry.EntryType == TarEntryType.Directory)
+            {
+                Directory.CreateDirectory(path);
+                File.SetUnixFileMode(path, entry.Mode);
+            }
+            else if (entry.EntryType == TarEntryType.RegularFile)
+            {
+                // ReSharper disable once PossibleMultipleEnumeration
+                if (ignorables.Any(x =>
+                        string.Equals(Path.GetFileName(entry.Name), x, StringComparison.CurrentCultureIgnoreCase)))
                     continue;
-                }
-                OnNextFile?.Invoke(filePath);
-                // Create folder anyway since a folder may not have an entry
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-                using (var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                
+                if (entry.DataStream is null)
+                    throw new NullReferenceException("The tar entry data stream is null");
+                
+                OnNextFile?.Invoke(path);
+
+                var baseDir = Path.GetDirectoryName(path);
+                if (baseDir is not null)
+                    Directory.CreateDirectory(baseDir);
+                
+                await using (var newFile = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    using (var entryStream = entry.Open())
-                    {
-                        var relativeProgress = new Progress<long>(fileProgressBytes => progress.Report((double)(fileProgressBytes + currentProgression) / totalLength));
-                        await entryStream.CopyToAsync(file, 81920, relativeProgress, cancellationToken);
-                    }
+                    File.SetUnixFileMode(path, entry.Mode);
+                    await entry.DataStream.CopyToAsync(newFile, 81920, relativeProgress, cancellationToken);
                 }
-                currentProgression += entry.Length;
+                
+                Interlocked.Add(ref currentProgression, entry.Length);
+            }
+            else
+            {
+                throw new NotImplementedException("Regular file and directory are the only entry types implemented");
             }
         }
     }
