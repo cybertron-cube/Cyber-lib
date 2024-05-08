@@ -61,7 +61,7 @@ public partial class MainWindow : Window
 
             //Download the update (zip file)
             UILabel.Text = "Downloading update...";
-            await Updater.DownloadUpdatesProgressAsync(DownloadLink, DownloadPath, HttpClient, new Progress<double>(x => UIProgress.Value = x));
+            await Updater.DownloadUpdatesProgressAsync(DownloadLink, DownloadPath, HttpClient, new ThreadSafeProgress<double>(x => UIProgress.Value = x));
 
             //Remove files that aren't in preservables
             UILabel.Text = "Removing files...";
@@ -82,7 +82,7 @@ public partial class MainWindow : Window
                 DownloadPath,
                 ExtractDestPath,
                 Preservables,
-                new Progress<double>(x => UIProgress.Value = x));
+                new ThreadSafeProgress<double>(x => UIProgress.Value = x));
 
             //Remove zip file, start process, then exit
             UILabel.Text = "Deleting temporary install files...";
