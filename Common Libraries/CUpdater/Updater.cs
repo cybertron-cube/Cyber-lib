@@ -248,6 +248,7 @@ public class Updater
             if (Path.GetFileName(baseDir) == "updater")
             {
                 filePath = Path.Combine(Path.GetDirectoryName(baseDir), "updater_new", Path.GetFileName(filePath));
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath));
             }
 
             await using (var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -337,6 +338,7 @@ public class Updater
                 if (Path.GetFileName(baseDir) == "updater")
                 {
                     path = Path.Combine(Path.GetDirectoryName(baseDir), "updater_new", Path.GetFileName(path));
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
                 }
                 
                 await using (var newFile = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
