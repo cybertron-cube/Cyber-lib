@@ -116,7 +116,7 @@ public class Updater
         var args = new UpdaterArgs(procName, updaterPath, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
             preservables.ToListWithCast());
         
-        ArgsHelper.AddToProcessStartInfo(ref processStartInfo, args);
+        ArgsHelper.AddToProcessStartInfo(processStartInfo, args);
         
         Process.Start(processStartInfo);
     }

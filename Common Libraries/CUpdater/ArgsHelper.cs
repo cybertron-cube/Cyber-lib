@@ -4,7 +4,7 @@ namespace Cybertron.CUpdater;
 
 public static class ArgsHelper
 {
-    public static void AddToProcessStartInfo(ref ProcessStartInfo processStartInfo, UpdaterArgs updaterArgs)
+    public static void AddToProcessStartInfo(ProcessStartInfo processStartInfo, UpdaterArgs updaterArgs)
     {
         var type = typeof(UpdaterArgs);
         foreach (var propertyInfo in type.GetProperties())
