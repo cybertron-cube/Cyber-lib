@@ -22,7 +22,7 @@ public static class ArgsHelper
             }
         }
     }
-
+    
     public static UpdaterArgs ArrayToArgs(string[] array)
     {
         var type = typeof(UpdaterArgs);
