@@ -14,12 +14,14 @@ public class Updater
         """
         #!/bin/sh
         
-        SCRIPT_PATH="$1"
-        UPDATER_PATH="$2"
+        set -e
+        
+        SCRIPT_PATH="$0"
+        UPDATER_PATH="$1"
         UPDATER_DIR=$( dirname "$UPDATER_PATH" )
         UPDATER_DIR_DIR=$( dirname "$UPDATER_DIR" )
         
-        UPDATER_PATH "$@"
+        "$UPDATER_PATH" "$@"
         
         rm -rf "$UPDATER_DIR"
         mv "$UPDATER_DIR_DIR/updater_new" "$UPDATER_DIR_DIR/updater"
@@ -31,12 +33,10 @@ public class Updater
     // scriptPath, updaterPath, ...
     public const string WindowsScript =
         """
-        param (
-            [string]$SCRIPT_PATH,
-            [string[]]$Args
-        )
+        $ErrorActionPreference = "Stop"
         
-        $UPDATER_PATH = $Args[0]
+        $SCRIPT_PATH = $MyInvocation.MyCommand.Path
+        $UPDATER_PATH = $args[0]
         $UPDATER_DIR = Split-Path -Parent $UPDATER_PATH
         $UPDATER_DIR_DIR = Split-Path -Parent $UPDATER_DIR
         
