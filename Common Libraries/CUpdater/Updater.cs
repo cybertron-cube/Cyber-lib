@@ -113,7 +113,7 @@ public class Updater
             };
         }
         
-        var args = new UpdaterArgs(procName, updaterPath, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
+        var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
             preservables.ToListWithCast());
         
         ArgsHelper.AddToProcessStartInfo(processStartInfo, args);
