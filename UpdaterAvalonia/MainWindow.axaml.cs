@@ -86,16 +86,28 @@ public partial class MainWindow : Window
             
             // Remove files that aren't in preservables
             UILabel.Text = "Removing files...";
-            var intersect = dirInfo.EnumerateFiles().ExceptBy(UpdaterArgs.Preservables, x => x.Name);
-            var total = intersect.Count();
-            var current = 0;
-            foreach (var file in intersect)
+            var intersect = dirInfo
+                .EnumerateFiles("*", searchOption: SearchOption.AllDirectories)
+                .ExceptBy(UpdaterArgs.Preservables, x => x.Name)
+                .ToArray();
+            var total = intersect.Length;
+            for (int i = 0; i < total; i++)
             {
-                file.Delete();
-                current++;
-                UIProgress.Value = (double)current / total;
+                var file = intersect[i];
+                
+                if (file.Directory?.Name != "updater")
+                    file.Delete();
+                
+                UIProgress.Value = (double)i / total;
             }
-
+            
+            // Remove empty directories
+            var rmDirs = dirInfo.EnumerateDirectories("*", SearchOption.AllDirectories)
+                .Where(x => !x.EnumerateFiles("*", SearchOption.AllDirectories).Any());
+            foreach (var dir in rmDirs)
+                if (dir.Exists)
+                    dir.Delete();
+            
             // Extract archive file contents to destination
             var updater = new Updater();
             updater.OnNextFile += Updater_OnNextFile;
