@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Net.Http.Headers;
 using Cybertron.CUpdater.Github;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Formats.Tar;
 using System.Runtime.Versioning;
 
@@ -11,6 +10,45 @@ namespace Cybertron.CUpdater;
 
 public class Updater
 {
+    public const string UnixScript =
+        """
+        #!/bin/sh
+        
+        SCRIPT_PATH="$1"
+        UPDATER_PATH="$2"
+        UPDATER_DIR=$( dirname "$UPDATER_PATH" )
+        UPDATER_DIR_DIR=$( dirname "$UPDATER_DIR" )
+        
+        UPDATER_PATH "$@"
+        
+        rm -rf "$UPDATER_DIR"
+        mv "$UPDATER_DIR_DIR/updater_new" "$UPDATER_DIR_DIR/updater"
+        
+        rm -- "$SCRIPT_PATH"
+        
+        """;
+    
+    // scriptPath, updaterPath, ...
+    public const string WindowsScript =
+        """
+        param (
+            [string]$SCRIPT_PATH,
+            [string[]]$Args
+        )
+        
+        $UPDATER_PATH = $Args[0]
+        $UPDATER_DIR = Split-Path -Parent $UPDATER_PATH
+        $UPDATER_DIR_DIR = Split-Path -Parent $UPDATER_DIR
+        
+        & $UPDATER_PATH $Args
+        
+        Remove-Item -Path $UPDATER_DIR -Recurse -Force
+        Move-Item -Path "$UPDATER_DIR_DIR\updater_new" -Destination "$UPDATER_DIR_DIR\updater" -Force
+        
+        Remove-Item -Path $SCRIPT_PATH -Force
+        
+        """;
+    
     public event Action<string>? OnNextFile;
 
     public record struct CheckUpdateResult(bool UpdateAvailable, string TagName = "", string Name = "",
@@ -95,23 +133,31 @@ public class Updater
         if (appToLaunch is null)
             throw new NullReferenceException("Could not obtain filename from process main module");
         
+        
+        var scriptPath = Path.GetTempFileName();
+        
         ProcessStartInfo processStartInfo;
         if (OperatingSystem.IsWindows())
         {
             processStartInfo = new ProcessStartInfo
             {
-                FileName = updaterPath,
+                FileName = "powershell.exe",
                 UseShellExecute = true,
                 Verb = "runas"
             };
+            
+            File.WriteAllText(scriptPath, WindowsScript);
         }
         else
         {
             processStartInfo = new ProcessStartInfo
             {
-                FileName = updaterPath
+                FileName = "/bin/sh"
             };
+            
+            File.WriteAllText(scriptPath, UnixScript);
         }
+        processStartInfo.ArgumentList.Add(scriptPath);
         
         var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
             preservables.ToListWithCast());
@@ -196,6 +242,13 @@ public class Updater
             var baseDir = Path.GetDirectoryName(filePath);
             if (baseDir is not null)
                 Directory.CreateDirectory(baseDir);
+            
+            // WARNING - UPDATER SPECIFIC
+            // This locks in the "updater" folder requirement
+            if (Path.GetFileName(baseDir) == "updater")
+            {
+                filePath = Path.Combine(Path.GetDirectoryName(baseDir), "updater_new", Path.GetFileName(filePath));
+            }
 
             await using (var file = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
@@ -278,6 +331,13 @@ public class Updater
                 var baseDir = Path.GetDirectoryName(path);
                 if (baseDir is not null)
                     Directory.CreateDirectory(baseDir);
+                
+                // WARNING - UPDATER SPECIFIC
+                // This locks in the "updater" folder requirement
+                if (Path.GetFileName(baseDir) == "updater")
+                {
+                    path = Path.Combine(Path.GetDirectoryName(baseDir), "updater_new", Path.GetFileName(path));
+                }
                 
                 await using (var newFile = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
                 {

@@ -105,21 +105,14 @@ public partial class MainWindow : Window
                 UpdaterArgs.Preservables,
                 new ThreadSafeProgress<double>(x => UIProgress.Value = x));
 
-            //Remove archive file, start process, then exit
+            // Remove archive file, start process, then exit
             UILabel.Text = "Deleting temporary install files...";
             UIProgress.IsVisible = false;
             File.Delete(DownloadPath);
             
             Process.Start(UpdaterArgs.AppToLaunch);
             
-            
-            //CybertronUpdater
-            //TODO Update the updater LMAO
-            //TODO Extract updater files to a folder named updater_new
-            //TODO Have script wait for this process to exit and then delete updater folder and rename new one
-            //The script will be created here so if the script is changed the updater will likely not update properly
-            
-            Close(); 
+            Close();
         }
         catch (Exception ex)
         {
