@@ -68,7 +68,7 @@ public class Updater
     /// <param name="includePreReleases"></param>
     /// <returns> <see cref="CheckUpdateResult"/> </returns>
     /// <exception cref="HttpRequestException"></exception>
-    /// <exception cref="InvalidOperationException">If the asset page contains more than one asset that contains the assetIdentifier string</exception>
+    /// <exception cref="InvalidOperationException">If the asset page contains more than one or no assets matching all <paramref name="assetIdentifiers"/></exception>
     /// <exception cref="NullReferenceException">Unable to properly create an IVersion instance from the received tag name</exception>
     public static async Task<CheckUpdateResult> GithubCheckForUpdatesAsync<TVersion>(string appName, IEnumerable<string> assetIdentifiers, string url, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
     {
