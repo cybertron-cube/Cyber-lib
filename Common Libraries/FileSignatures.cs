@@ -16,16 +16,12 @@ public static class FileSignatures
         => 64 - BitOperations.LeadingZeroCount(number);
     
     public static bool IsZip(string filePath)
-    {
-        return MatchSignature(filePath, 0 , ZipSignature);
-    }
+        => MatchSignature(filePath, ZipSignature);
     
     public static bool IsGZip(string filePath)
-    {
-        return MatchSignature(filePath, 0 , GZipSignature);
-    }
+        => MatchSignature(filePath, GZipSignature);
     
-    public static bool MatchSignature(string filePath, int offset, ulong signature)
+    public static bool MatchSignature(string filePath, ulong signature, int offset = 0)
     {
         var bits = MinSize(signature);
         var length = (long)Math.Ceiling((double)bits / 8);
