@@ -40,12 +40,12 @@ public class Updater
         $UPDATER_DIR = Split-Path -Parent $UPDATER_PATH
         $UPDATER_DIR_DIR = Split-Path -Parent $UPDATER_DIR
         
-        & $UPDATER_PATH $Args
+        Start-Process -FilePath "$UPDATER_PATH" -Verb RunAs -ArgumentList "$args" -Wait
         
-        Remove-Item -Path $UPDATER_DIR -Recurse -Force
+        Remove-Item -Path "$UPDATER_DIR" -Recurse -Force
         Move-Item -Path "$UPDATER_DIR_DIR\updater_new" -Destination "$UPDATER_DIR_DIR\updater" -Force
         
-        Remove-Item -Path $SCRIPT_PATH -Force
+        Remove-Item -Path "$SCRIPT_PATH" -Force
         
         """;
     
@@ -119,8 +119,18 @@ public class Updater
             return latestRelease;
         }
     }
-
-    public static void StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables)
+    
+    /// <summary>
+    /// Starts the updater executable with the needed arguments
+    /// </summary>
+    /// <param name="updaterPath">Path to the updater executable</param>
+    /// <param name="downloadLink">Download link that can be obtained from <see cref="GithubCheckForUpdatesAsync{TVersion}"/></param>
+    /// <param name="extractDestination">Where to extract the archive downloaded from the link</param>
+    /// <param name="wildCardPreserve">Range of file names to preserve when extracting (separate multiple entries with ';')</param>
+    /// <param name="preservables">Specific file names to preserve when extracting</param>
+    /// <returns>Path to a temporary updater script</returns>
+    /// <exception cref="NullReferenceException"></exception>
+    public static string StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables)
     {
         string? appToLaunch;
         string procName;
@@ -133,8 +143,7 @@ public class Updater
         if (appToLaunch is null)
             throw new NullReferenceException("Could not obtain filename from process main module");
         
-        
-        var scriptPath = Path.GetTempFileName();
+        var scriptPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         
         ProcessStartInfo processStartInfo;
         if (OperatingSystem.IsWindows())
@@ -143,8 +152,13 @@ public class Updater
             {
                 FileName = "powershell.exe",
                 UseShellExecute = true,
-                Verb = "runas"
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
             };
+            
+            // Make windows happy ;)
+            // Otherwise there will be a prompt for associating a file extension
+            scriptPath = Path.ChangeExtension(scriptPath, "ps1");
             
             File.WriteAllText(scriptPath, WindowsScript);
         }
@@ -165,6 +179,8 @@ public class Updater
         ArgsHelper.AddToProcessStartInfo(processStartInfo, args);
         
         Process.Start(processStartInfo);
+
+        return scriptPath;
     }
     
     public static async Task DownloadUpdatesProgressAsync(string downloadLink, string destDir, HttpClient client, IProgress<double> progress)
