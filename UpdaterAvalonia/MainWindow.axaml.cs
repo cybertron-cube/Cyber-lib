@@ -122,7 +122,11 @@ public partial class MainWindow : Window
             UIProgress.IsVisible = false;
             File.Delete(DownloadPath);
             
-            Process.Start(UpdaterArgs.AppToLaunch);
+            // This executable will be run with admin privileges (on windows)
+            // We don't want to give admin privileges to the app
+            // If we do drag and drop will not work if used on windows
+            if (!OperatingSystem.IsWindows())
+                Process.Start(UpdaterArgs.AppToLaunch);
             
             Close();
         }

@@ -39,11 +39,18 @@ public class Updater
         $UPDATER_PATH = $args[0]
         $UPDATER_DIR = Split-Path -Parent $UPDATER_PATH
         $UPDATER_DIR_DIR = Split-Path -Parent $UPDATER_DIR
+        $APP_TO_LAUNCH = $args[4]
         
         Start-Process -FilePath "$UPDATER_PATH" -Verb RunAs -ArgumentList "$args" -Wait
         
+        $code = @"
         Remove-Item -Path "$UPDATER_DIR" -Recurse -Force
         Move-Item -Path "$UPDATER_DIR_DIR\updater_new" -Destination "$UPDATER_DIR_DIR\updater" -Force
+        "@
+        
+        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList "-Command", "$code" -WindowStyle Hidden -Wait
+        
+        & "$APP_TO_LAUNCH"
         
         Remove-Item -Path "$SCRIPT_PATH" -Force
         
@@ -151,9 +158,7 @@ public class Updater
             processStartInfo = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden
+                CreateNoWindow = true
             };
             
             // Make windows happy ;)
