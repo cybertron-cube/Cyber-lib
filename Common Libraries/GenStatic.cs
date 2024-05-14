@@ -12,7 +12,7 @@ public static partial class GenStatic
     public static string GetFullPathFromRelative(string? relPath = null)
     {
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
-        return relPath == null ? basePath : Path.Combine(basePath, relPath);
+        return string.IsNullOrWhiteSpace(relPath) ? basePath : Path.Combine(basePath, relPath);
     }
     
     public static string GetRelativePathFromFull(string baseDirPath, string fullPath)
