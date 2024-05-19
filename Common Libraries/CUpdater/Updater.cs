@@ -63,23 +63,26 @@ public class Updater
         
     //TODO have option for target_commitish (branch name)
     /// <summary>
-    /// Retrieves the <see cref="GithubRelease"/> from github,
-    /// gets a single asset with a name that contains each of the <paramref name="assetIdentifiers"/> from the <see cref="GithubRelease"/>,
-    /// and returns a <see cref="CheckUpdateResult"/>
+    /// Retrieves the latest <see cref="GithubRelease"/> from the <paramref name="apiUrl"/>,
+    /// gets a single <see cref="GithubAsset"/> from the <see cref="GithubRelease"/> determined by <paramref name="assetResolver"/>,
+    /// and returns a <see cref="CheckUpdateResult"/>.
     /// </summary>
     /// <param name="appName">Github repo name/App name</param>
-    /// <param name="assetIdentifiers">Strings to search for in each asset of the latest release</param>
-    /// <param name="url">The github api url, example: "https://api.github.com/repos/cybertron-cube/cyber-lib"</param>
-    /// <param name="currentVersion"></param>
-    /// <param name="client"></param>
-    /// <param name="includePreReleases"></param>
-    /// <returns> <see cref="CheckUpdateResult"/> </returns>
-    /// <exception cref="HttpRequestException"></exception>
-    /// <exception cref="InvalidOperationException">If the asset page contains more than one or no assets matching all <paramref name="assetIdentifiers"/></exception>
-    /// <exception cref="NullReferenceException">Unable to properly create an IVersion instance from the received tag name</exception>
-    public static async Task<CheckUpdateResult> GithubCheckForUpdatesAsync<TVersion>(string appName, IEnumerable<string> assetIdentifiers, string url, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
+    /// <param name="apiUrl">The github api url, example: https://api.github.com/repos/cybertron-cube/cyber-lib</param>
+    /// <param name="currentVersion">The currently installed version of the requested application</param>
+    /// <param name="assetResolver">A func that returns true for only a single <see cref="GithubAsset"/> within a <see cref="GithubRelease"/></param>
+    /// <param name="includePreReleases">Whether to include <see cref="GithubRelease"/>s that are marked as pre-release</param>
+    /// <param name="client">An optional <see cref="HttpClient"/> to use, if not specified, a new one will be created</param>
+    /// <returns>A <see cref="CheckUpdateResult"/> that contains information specific to the resolved <see cref="GithubRelease"/> and <see cref="GithubAsset"/></returns>
+    /// <exception cref="HttpRequestException">An error occured attempting to send an http request to the github <paramref name="apiUrl"/></exception>
+    /// <exception cref="InvalidOperationException">If the <see cref="GithubRelease"/> contains more than one or no <see cref="GithubAsset"/> resolved using <paramref name="assetResolver"/></exception>
+    /// <exception cref="NullReferenceException">Unable to properly create an IVersion instance from the received tag name. Make sure If you are using your own version specification inherited from
+    /// <see cref="IVersion"/>, that it has a constructor with a single string argument that would represent a version under your scheme</exception>
+    public static async Task<CheckUpdateResult> GithubCheckForUpdatesAsync<TVersion>(string appName, string apiUrl, TVersion currentVersion, Func<GithubAsset, bool> assetResolver, bool includePreReleases = false, HttpClient? client = null) where TVersion : IVersion
     {
-        var latestRelease = await GetLatestGithubRelease(appName, url, currentVersion, client, includePreReleases);
+        client ??= new HttpClient();
+        
+        var latestRelease = await GetLatestGithubRelease(appName, apiUrl, currentVersion, client, includePreReleases);
         var latestVersion = (TVersion?)Activator.CreateInstance(typeof(TVersion), latestRelease.tag_name);
         if (latestVersion is null) throw new NullReferenceException($"Could not properly create an instance of your type, {typeof(TVersion)}, of version from string {latestRelease.tag_name}");
             
@@ -88,18 +91,18 @@ public class Updater
             return new CheckUpdateResult(true,
                 latestRelease.tag_name,
                 latestRelease.name,
-                latestRelease.assets.Single(x => x.name.Contains(assetIdentifiers)).browser_download_url,
+                latestRelease.assets.Single(assetResolver).browser_download_url,
                 latestRelease.body);
         }
             
         return new CheckUpdateResult(false);
     }
 
-    public static async Task<GithubRelease> GetLatestGithubRelease<TVersion>(string appName, string url, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
+    public static async Task<GithubRelease> GetLatestGithubRelease<TVersion>(string appName, string apiUrl, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
     {
-        url += includePreReleases ? "/releases?per_page=1" : "/releases/latest";
+        apiUrl += includePreReleases ? "/releases?per_page=1" : "/releases/latest";
         string responseJson;
-        using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
+        using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, apiUrl))
         {
             requestMessage.Headers.UserAgent.Add(new ProductInfoHeaderValue(appName, currentVersion.ToString()));
             var response = await client.SendAsync(requestMessage);
