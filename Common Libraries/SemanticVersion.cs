@@ -233,7 +233,7 @@ public class SemanticVersion : IVersion
             _major != version._major ? (_major > version._major ? 1 : -1) :
             _minor != version._minor ? (_minor > version._minor ? 1 : -1) :
             _patch != version._patch ? (_patch > version._patch ? 1 : -1) :
-            _identifier != version._identifier ? string.Compare(_identifier, version._identifier, StringComparison.Ordinal) :
+            !string.Equals(_identifier, version._identifier, StringComparison.OrdinalIgnoreCase) ? string.Compare(_identifier, version._identifier, StringComparison.Ordinal) :
             _build != version._build ? (_build > version._build ? 1 : -1) :
             0;
     }
