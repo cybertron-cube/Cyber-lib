@@ -100,7 +100,7 @@ public class Updater
 
     public static async Task<GithubRelease> GetLatestGithubRelease<TVersion>(string appName, string apiUrl, TVersion currentVersion, HttpClient client, bool includePreReleases = false) where TVersion : IVersion
     {
-        apiUrl += includePreReleases ? "/releases?per_page=1" : "/releases/latest";
+        apiUrl += includePreReleases ? "/releases?per_page=1&page=1" : "/releases/latest";
         string responseJson;
         using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, apiUrl))
         {
