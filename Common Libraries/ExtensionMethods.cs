@@ -157,24 +157,23 @@ public static class ExtensionMethods
         return haystack.ContainsOrdinal(needle);
     }
     
-    public static StringBuilder ToLower(this StringBuilder sb)
+    public static void ToLower(this StringBuilder sb)
     {
-        StringBuilder returnSb = new();
-        for (int i = 0; i <= sb.Length - 1; i++)
+        for (int i = 0; i < sb.Length; i++)
         {
-            returnSb.Append(char.ToLower(sb[i]));
+            sb[i] = char.ToLower(sb[i]);
         }
-        return returnSb;
     }
     
-    public static void TrimEnd(this StringBuilder sb, string str)
+    public static void TrimEnd(this StringBuilder sb, string trimEnd)
     {
-        sb.Remove(sb.Length - str.Length, str.Length);
+        if (sb.EndsWith(trimEnd))
+            sb.Remove(sb.Length - trimEnd.Length, trimEnd.Length);
     }
     
     public static string ToStringTrimEnd(this StringBuilder sb, string trimEnd)
     {
-        return sb.ToString(0, sb.Length - trimEnd.Length);
+        return sb.EndsWith(trimEnd) ? sb.ToString(0, sb.Length - trimEnd.Length) : sb.ToString();
     }
     
     public static bool ParseToBool(this string str)
