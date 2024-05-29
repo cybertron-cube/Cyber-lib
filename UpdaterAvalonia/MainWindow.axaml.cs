@@ -72,10 +72,9 @@ public partial class MainWindow : Window
                 }
             }
             
-            var debug = UpdaterArgs.DownloadLink + Environment.NewLine + DownloadPath + Environment.NewLine 
-                        + UpdaterArgs.ExtractDestination + Environment.NewLine + UpdaterArgs.AppToLaunch + Environment.NewLine
-                        + "--IGNORABLES--" + Environment.NewLine + string.Join(Environment.NewLine, UpdaterArgs.Preservables)
-                         + Environment.NewLine + procEx;
+            var debug = UpdaterArgs + Environment.NewLine + "--IGNORABLES--" + Environment.NewLine
+                        + string.Join(Environment.NewLine, UpdaterArgs.Preservables) + Environment.NewLine + procEx
+                        + Environment.NewLine;
             
             await File.WriteAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"), debug);
             
@@ -133,8 +132,13 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             File.Delete(DownloadPath);
+            
+            var debug = UpdaterArgs + Environment.NewLine + "--IGNORABLES--" + Environment.NewLine
+                        + string.Join(Environment.NewLine, UpdaterArgs.Preservables) + Environment.NewLine + ex
+                        + Environment.NewLine;
+            
             await File.AppendAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"), 
-                Environment.NewLine + ex);
+                debug);
             Close();
         }
     }
