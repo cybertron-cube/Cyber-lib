@@ -189,7 +189,7 @@ public class Updater
             
             File.WriteAllText(scriptPath, UnixScript);
         }
-        processStartInfo.ArgumentList.Add(scriptPath);
+        processStartInfo.ArgumentList.Add(ArgsHelper.QuoteArgument(scriptPath));
         
         var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
             preservables.ToListWithCast());

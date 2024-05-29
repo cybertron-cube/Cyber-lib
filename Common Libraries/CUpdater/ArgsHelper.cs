@@ -13,12 +13,12 @@ public static class ArgsHelper
             {
                 foreach (var obj in enumerable)
                 {
-                    processStartInfo.ArgumentList.Add(obj.ToString()!);
+                    processStartInfo.ArgumentList.Add(QuoteArgument(obj.ToString()));
                 }
             }
             else
             {
-                processStartInfo.ArgumentList.Add(propertyInfo.GetValue(updaterArgs)!.ToString()!);
+                processStartInfo.ArgumentList.Add(QuoteArgument(propertyInfo.GetValue(updaterArgs)?.ToString()));
             }
         }
     }
@@ -47,5 +47,10 @@ public static class ArgsHelper
         var ctor = type.GetConstructor(ctorTypes.ToArray());
         var result = (UpdaterArgs)ctor!.Invoke(vals.ToArray());
         return result;
+    }
+
+    public static string QuoteArgument(string? argument)
+    {
+        return $"\"{argument}\"";
     }
 }
