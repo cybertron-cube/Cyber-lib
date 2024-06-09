@@ -54,8 +54,8 @@ public class Updater
         Start-Process -FilePath "$UPDATER_PATH" -Verb RunAs -ArgumentList $quotedArgs -Wait
         
         $code = @"
-        Remove-Item -Path "$UPDATER_DIR" -Recurse -Force
-        Move-Item -Path "$UPDATER_DIR_DIR\updater_new" -Destination "$UPDATER_DIR_DIR\updater" -Force
+        Remove-Item -Path `"`"`"$UPDATER_DIR`"`"`" -Recurse -Force
+        Move-Item -Path `"`"`"$UPDATER_DIR_DIR\updater_new`"`"`" -Destination `"`"`"$UPDATER_DIR_DIR\updater`"`"`" -Force
         "@
         
         Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList "-Command", "$code" -WindowStyle Hidden -Wait
