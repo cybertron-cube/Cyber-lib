@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace Cybertron.CUpdater;
 
@@ -7,20 +8,26 @@ public static class ArgsHelper
     public static void AddToProcessStartInfo(ProcessStartInfo processStartInfo, UpdaterArgs updaterArgs)
     {
         var type = typeof(UpdaterArgs);
-        foreach (var propertyInfo in type.GetProperties())
+        var properties = type.GetProperties();
+        var sb = new StringBuilder(properties.Length);
+        foreach (var propertyInfo in properties)
         {
             if (propertyInfo.GetValue(updaterArgs) is IEnumerable<object> enumerable)
             {
                 foreach (var obj in enumerable)
                 {
-                    processStartInfo.ArgumentList.Add(QuoteArgument(obj.ToString()));
+                    sb.Append(' ');
+                    sb.Append(QuoteArgument(obj.ToString()));
                 }
             }
             else
             {
-                processStartInfo.ArgumentList.Add(QuoteArgument(propertyInfo.GetValue(updaterArgs)?.ToString()));
+                sb.Append(' ');
+                sb.Append(QuoteArgument(propertyInfo.GetValue(updaterArgs)?.ToString()));
             }
         }
+
+        processStartInfo.Arguments += sb.ToString();
     }
     
     public static UpdaterArgs ArrayToArgs(string[] array)
@@ -49,8 +56,11 @@ public static class ArgsHelper
         return result;
     }
 
-    public static string QuoteArgument(string? argument)
+    private static string QuoteArgument(string? argument)
     {
-        return $"\"{argument}\"";
+        // Maybe a powershell bug? but arguments to the ps script require triple quotes when there are spaces in the arg
+        // The path to the ps script doesn't require triple quotes though
+        // Unix shell script seems to work as it should without any unique fixes
+        return OperatingSystem.IsWindows() ? $"\"\"\"{argument}\"\"\"" : $"\"{argument}\"";
     }
 }
