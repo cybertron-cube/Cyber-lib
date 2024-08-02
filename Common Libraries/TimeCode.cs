@@ -6,35 +6,8 @@ namespace Cybertron;
 /// Represents a time code consisting of hours, minutes, seconds, milliseconds
 /// </summary>
     
-//TODO remove Value, remove toDouble/ToInt/etc., add totalhours, totalminutes, totalseconds
 public partial class TimeCode
 {
-    public enum TimeUnit
-    {
-        Millisecond,
-        Second,
-        Minute,
-        Hour
-    }
-
-    /// <summary>
-    /// Available string formats for <see cref="TimeCode.StringFormat"/> property that changes
-    /// <see cref="TimeCode.FormattedString"/>
-    /// </summary>
-    public enum TimeCodeFormat
-    {
-        /// <summary>
-        /// HH:MM:SS:MsMsMs
-        /// </summary>
-        Basic,
-        
-        /// <summary>
-        /// HH:MM:SS:Frame, requires fps property to be set accordingly as well as milliseconds in order to see a frame
-        /// number different from zero
-        /// </summary>
-        SMPTE
-    }
-
     [GeneratedRegex(@"^(?<hours>\d\d):(?<minutes>\d\d):(?<seconds>\d\d).(?<milliseconds>\d\d\d)$")]
     
     private static partial Regex GenTimeCodeRegex();
@@ -122,7 +95,7 @@ public partial class TimeCode
         set
         {
             _totalMinutes = value;
-            UpdateUnits(TimeUnit.Minute);
+            UpdateUnits(TimeCodeUnit.Minute);
         }
     }
 
@@ -134,7 +107,7 @@ public partial class TimeCode
         set
         {
             _totalSeconds = value;
-            UpdateUnits(TimeUnit.Second);
+            UpdateUnits(TimeCodeUnit.Second);
         }
     }
     
@@ -146,7 +119,7 @@ public partial class TimeCode
         set
         {
             _totalMinutes = value;
-            UpdateUnits(TimeUnit.Millisecond);
+            UpdateUnits(TimeCodeUnit.Millisecond);
         }
     }
 
@@ -239,63 +212,63 @@ public partial class TimeCode
         UpdateFormattedString();
     }
     
-    public double GetExactUnits(TimeUnit timeUnit) //TODO add bool total = false param
+    public double GetExactUnits(TimeCodeUnit timeCodeUnit) //TODO add bool total = false param
     {
-        return timeUnit switch
+        return timeCodeUnit switch
         {
-            TimeUnit.Hour => _hours
+            TimeCodeUnit.Hour => _hours
                              + (double)_minutes / 60
                              + (double)_seconds / 3600
                              + (double)_milliseconds / 3600000,
-            TimeUnit.Minute => _hours * 60
+            TimeCodeUnit.Minute => _hours * 60
                                + _minutes
                                + (double)_seconds / 60
                                + (double)_milliseconds / 60000,
-            TimeUnit.Second => _hours * 3600
+            TimeCodeUnit.Second => _hours * 3600
                                + _minutes * 60
                                + _seconds
                                + (double)_milliseconds / 1000,
-            TimeUnit.Millisecond => _hours * 3600000
+            TimeCodeUnit.Millisecond => _hours * 3600000
                                     + _minutes * 60000
                                     + _seconds * 1000
                                     + _milliseconds,
-            _ => throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null)
         };
     }
     
-    public static double GetExactUnits(TimeUnit timeUnit, string timeCode)
+    public static double GetExactUnits(TimeCodeUnit timeCodeUnit, string timeCode)
     {
-        return timeUnit switch
+        return timeCodeUnit switch
         {
-            TimeUnit.Hour => int.Parse(timeCode.Substring(0, 2))
+            TimeCodeUnit.Hour => int.Parse(timeCode.Substring(0, 2))
                              + double.Parse(timeCode.Substring(3, 2)) / 60
                              + double.Parse(timeCode.Substring(6, 2)) / 3600
                              + double.Parse(timeCode.Substring(9, 3)) / 3600000,
-            TimeUnit.Minute => int.Parse(timeCode.Substring(0, 2)) * 60
+            TimeCodeUnit.Minute => int.Parse(timeCode.Substring(0, 2)) * 60
                                + int.Parse(timeCode.Substring(3, 2))
                                + double.Parse(timeCode.Substring(6, 2)) / 60
                                + double.Parse(timeCode.Substring(9, 3)) / 60000,
-            TimeUnit.Second => int.Parse(timeCode.Substring(0, 2)) * 3600
+            TimeCodeUnit.Second => int.Parse(timeCode.Substring(0, 2)) * 3600
                                + int.Parse(timeCode.Substring(3, 2)) * 60
                                + int.Parse(timeCode.Substring(6, 2))
                                + double.Parse(timeCode.Substring(9, 3)) / 1000,
-            TimeUnit.Millisecond => int.Parse(timeCode.Substring(0, 2)) * 3600000
+            TimeCodeUnit.Millisecond => int.Parse(timeCode.Substring(0, 2)) * 3600000
                                     + int.Parse(timeCode.Substring(3, 2)) * 60000
                                     + int.Parse(timeCode.Substring(6, 2)) * 1000
                                     + int.Parse(timeCode.Substring(9, 3)),
-            _ => throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null)
         };
     }
     
-    public void SetExactUnits(double time, TimeUnit timeUnit) //TODO add bool total = false param
+    public void SetExactUnits(double time, TimeCodeUnit timeCodeUnit) //TODO add bool total = false param
     {
-        switch (timeUnit)
+        switch (timeCodeUnit)
         {
-            case TimeUnit.Hour:
+            case TimeCodeUnit.Hour:
                 throw new NotImplementedException();
-            case TimeUnit.Minute:
+            case TimeCodeUnit.Minute:
                 throw new NotImplementedException();
-            case TimeUnit.Second:
+            case TimeCodeUnit.Second:
                 _totalSeconds = (int)time;
                 _milliseconds = (int)((time % 1) * 1000);
                 _totalMilliseconds = _totalSeconds * 1000 + _milliseconds;
@@ -305,8 +278,8 @@ public partial class TimeCode
                 _minutes = _totalMinutes % 60;
                 _hours = _totalMinutes / 60;
                 break;
-            case TimeUnit.Millisecond:
-                throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null);
+            case TimeCodeUnit.Millisecond:
+                throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null);
         }
         
         _formattedString =
@@ -376,30 +349,30 @@ public partial class TimeCode
         };
     }
 
-    private void UpdateUnits(TimeUnit timeUnit)
+    private void UpdateUnits(TimeCodeUnit timeCodeUnit)
     {
-        switch (timeUnit)
+        switch (timeCodeUnit)
         {
-            case TimeUnit.Minute:
+            case TimeCodeUnit.Minute:
                 _totalSeconds = _totalMinutes * 60;
                 _totalMilliseconds = _totalSeconds * 1000;
                 
                 _milliseconds = 0;
                 break;
-            case TimeUnit.Second:
+            case TimeCodeUnit.Second:
                 _totalMilliseconds = _totalSeconds * 1000;
                 _totalMinutes = _totalSeconds / 60;
                 
                 _milliseconds = 0;
                 break;
-            case TimeUnit.Millisecond:
+            case TimeCodeUnit.Millisecond:
                 _totalSeconds = _totalMilliseconds / 1000;
                 _totalMinutes = _totalSeconds / 60;
 
                 _milliseconds = _totalMilliseconds % 1000;
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(timeUnit), timeUnit, null);
+                throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null);
         }
 
         _seconds = _totalSeconds % 60;
