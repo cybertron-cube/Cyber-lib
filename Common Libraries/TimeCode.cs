@@ -17,6 +17,24 @@ public partial class TimeCode
         Hour
     }
 
+    /// <summary>
+    /// Available string formats for <see cref="TimeCode.StringFormat"/> property that changes
+    /// <see cref="TimeCode.FormattedString"/>
+    /// </summary>
+    public enum TimeCodeFormat
+    {
+        /// <summary>
+        /// HH:MM:SS:MsMsMs
+        /// </summary>
+        Basic,
+        
+        /// <summary>
+        /// HH:MM:SS:Frame, requires fps property to be set accordingly as well as milliseconds in order to see a frame
+        /// number different from zero
+        /// </summary>
+        SMPTE
+    }
+
     [GeneratedRegex(@"^(?<hours>\d\d):(?<minutes>\d\d):(?<seconds>\d\d).(?<milliseconds>\d\d\d)$")]
     
     private static partial Regex GenTimeCodeRegex();
@@ -131,11 +149,37 @@ public partial class TimeCode
             UpdateUnits(TimeUnit.Millisecond);
         }
     }
+
+    private double _fps;
+
+    public double Fps
+    {
+        get => _fps;
+        set
+        {
+            _fps = value;
+            UpdateFormattedString();
+        }
+    }
+
+    public int Frame => (int)Math.Floor((double)_milliseconds / 1000 * _fps);
+
+    private TimeCodeFormat _stringFormat = TimeCodeFormat.Basic;
+
+    public TimeCodeFormat StringFormat
+    {
+        get => _stringFormat;
+        set
+        {
+            _stringFormat = value;
+            UpdateFormattedString();
+        }
+    }
     
     private string _formattedString;
     
     /// <summary>
-    /// Time code represented in a properly formatted string (HH:MM:SS:MsMsMs)
+    /// Time code represented in a <see cref="TimeCodeFormat"/>, by default is <see cref="TimeCodeFormat.Basic"/>
     /// </summary>
     public string FormattedString => _formattedString;
 
@@ -146,8 +190,29 @@ public partial class TimeCode
         _seconds = seconds;
         _milliseconds = milliseconds;
         
-        _formattedString =
-            $"{PadTimeCodeUnit(hours)}:{PadTimeCodeUnit(minutes)}:{PadTimeCodeUnit(seconds)}.{PadTimeCodeUnit(milliseconds, 3)}";
+        UpdateFormattedString();
+
+        _totalMinutes = hours * 60 + _minutes;
+        _totalSeconds = hours * 3600
+                        + minutes * 60
+                        + seconds;
+        _totalMilliseconds = hours * 3600000
+                             + minutes * 60000
+                             + seconds * 1000
+                             + milliseconds;
+    }
+    
+    public TimeCode(int hours, int minutes, int seconds, int milliseconds, double fps)
+    {
+        _hours = hours;
+        _minutes = minutes;
+        _seconds = seconds;
+        _milliseconds = milliseconds;
+
+        _fps = fps;
+        _stringFormat = TimeCodeFormat.SMPTE;
+        
+        UpdateFormattedString();
 
         _totalMinutes = hours * 60 + _minutes;
         _totalSeconds = hours * 3600
@@ -171,8 +236,7 @@ public partial class TimeCode
         _minutes = _totalMinutes % 60;
         _hours = _totalMinutes / 60;
         
-        _formattedString =
-            $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}";
+        UpdateFormattedString();
     }
     
     public double GetExactUnits(TimeUnit timeUnit) //TODO add bool total = false param
@@ -302,8 +366,14 @@ public partial class TimeCode
     
     private void UpdateFormattedString()
     {
-        _formattedString =
-            $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}";
+        _formattedString = StringFormat switch
+        {
+            TimeCodeFormat.Basic =>
+                $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}",
+            TimeCodeFormat.SMPTE =>
+                $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}:{PadTimeCodeUnit(Frame)}",
+            _ => string.Empty
+        };
     }
 
     private void UpdateUnits(TimeUnit timeUnit)
