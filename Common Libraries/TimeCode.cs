@@ -282,8 +282,7 @@ public partial class TimeCode
                 throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null);
         }
         
-        _formattedString =
-            $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}";
+        UpdateFormattedString();
     }
     
     /// <summary>
@@ -379,7 +378,6 @@ public partial class TimeCode
         _minutes = _totalMinutes % 60;
         _hours = _totalMinutes / 60;
         
-        _formattedString =
-            $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}";
+        UpdateFormattedString();
     }
 }
