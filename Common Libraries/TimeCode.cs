@@ -17,7 +17,7 @@ public partial class TimeCode
         Hour
     }
 
-    [GeneratedRegex("^(?<hours>\\d\\d):(?<minutes>\\d\\d):(?<seconds>\\d\\d).(?<milliseconds>\\d\\d\\d)$")]
+    [GeneratedRegex(@"^(?<hours>\d\d):(?<minutes>\d\d):(?<seconds>\d\d).(?<milliseconds>\d\d\d)$")]
     
     private static partial Regex GenTimeCodeRegex();
     
