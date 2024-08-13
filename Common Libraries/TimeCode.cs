@@ -135,7 +135,19 @@ public partial class TimeCode
         }
     }
 
-    public int Frame => (int)Math.Floor((double)_milliseconds / 1000 * _fps);
+    public int Frame => CalculateFrameNumber();
+
+    private int CalculateFrameNumber()
+    {
+        var frame = (int)Math.Floor((double)_milliseconds / 1000 * _fps);
+        
+        if (StringFormat == TimeCodeFormat.SmpteDf && frame is 0 or 1 && _minutes % 10 != 0)
+        {
+            return frame + 2;
+        }
+
+        return frame;
+    }
 
     private TimeCodeFormat _stringFormat = TimeCodeFormat.Basic;
 
@@ -183,7 +195,7 @@ public partial class TimeCode
         _milliseconds = milliseconds;
 
         _fps = fps;
-        _stringFormat = TimeCodeFormat.SMPTE;
+        _stringFormat = fps - Math.Floor(fps) < 0.001 ? TimeCodeFormat.SmpteNdf : TimeCodeFormat.SmpteDf;
         
         UpdateFormattedString();
 
@@ -342,8 +354,10 @@ public partial class TimeCode
         {
             TimeCodeFormat.Basic =>
                 $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}.{PadTimeCodeUnit(_milliseconds, 3)}",
-            TimeCodeFormat.SMPTE =>
+            TimeCodeFormat.SmpteNdf =>
                 $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)}:{PadTimeCodeUnit(Frame)}",
+            TimeCodeFormat.SmpteDf =>
+                $"{PadTimeCodeUnit(_hours)}:{PadTimeCodeUnit(_minutes)}:{PadTimeCodeUnit(_seconds)};{PadTimeCodeUnit(Frame)}",
             _ => string.Empty
         };
     }

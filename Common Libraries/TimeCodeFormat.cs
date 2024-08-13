@@ -12,8 +12,14 @@ public enum TimeCodeFormat
     Basic,
         
     /// <summary>
-    /// HH:MM:SS:Frame, requires fps property to be set accordingly as well as milliseconds in order to see a frame
-    /// number different from zero
+    /// SMPTE non-drop-frame timecode, HH:MM:SS:Frame, requires fps property to be set accordingly as well as
+    /// milliseconds in order to see a frame number different from zero
     /// </summary>
-    SMPTE
+    SmpteNdf,
+    
+    /// <summary>
+    /// SMPTE drop-frame timecode, HH:MM:SS;Frame, requires fps property to be set accordingly as well as milliseconds
+    /// in order to see a frame number different from zero
+    /// </summary>
+    SmpteDf
 }
