@@ -137,6 +137,14 @@ public partial class TimeCode
 
     public int Frame { get; private set; }
 
+    private bool _calculateFrame;
+    
+    public bool CalculateFrame
+    {
+        get => _calculateFrame;
+        set => _calculateFrame = value;
+    }
+
     private void CalculateFrameNumber()
     {
         // non-drop frame
@@ -400,7 +408,8 @@ public partial class TimeCode
     
     private void UpdateFormattedString()
     {
-        CalculateFrameNumber();
+        if (_calculateFrame)
+            CalculateFrameNumber();
         _formattedString = StringFormat switch
         {
             TimeCodeFormat.Basic =>
