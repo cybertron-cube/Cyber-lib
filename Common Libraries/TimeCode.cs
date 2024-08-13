@@ -135,18 +135,42 @@ public partial class TimeCode
         }
     }
 
-    public int Frame => CalculateFrameNumber();
+    public int Frame { get; private set; }
 
-    private int CalculateFrameNumber()
+    private void CalculateFrameNumber()
     {
-        var frame = (int)Math.Floor((double)_milliseconds / 1000 * _fps);
-        
-        if (StringFormat == TimeCodeFormat.SmpteDf && frame is 0 or 1 && _minutes % 10 != 0)
+        // non-drop frame
+        var frame = GetFrameNumber();
+
+        if (StringFormat is TimeCodeFormat.SmpteNdf or TimeCodeFormat.Basic)
         {
-            return frame + 2;
+            Frame = frame;
+            return;
         }
 
-        return frame;
+        var totalDropFrames = _totalMinutes * 2 - _totalMinutes / 10;
+        AddFrames(totalDropFrames);
+        
+        // https://en.wikipedia.org/wiki/SMPTE_timecode#Drop-frame_timecode
+        frame = GetFrameNumber();
+        if (frame is 0 or 1 && _minutes % 10 != 0 && _seconds == 0)
+        {
+            frame += 2;
+        }
+
+        Frame = frame;
+    }
+    
+    private int GetFrameNumber() => (int)((double)_milliseconds / 1000 * _fps);
+
+    private void AddFrames(int frames)
+    {
+        if (_fps <= 0)
+            return;
+
+        var seconds = frames / _fps;
+        
+        SetExactUnits(GetExactUnits(TimeCodeUnit.Second) + seconds, TimeCodeUnit.Second, false);
     }
 
     private TimeCodeFormat _stringFormat = TimeCodeFormat.Basic;
@@ -297,6 +321,32 @@ public partial class TimeCode
         UpdateFormattedString();
     }
     
+    private void SetExactUnits(double time, TimeCodeUnit timeCodeUnit, bool updateFormatString = false)
+    {
+        switch (timeCodeUnit)
+        {
+            case TimeCodeUnit.Hour:
+                throw new NotImplementedException();
+            case TimeCodeUnit.Minute:
+                throw new NotImplementedException();
+            case TimeCodeUnit.Second:
+                _totalSeconds = (int)time;
+                _milliseconds = (int)((time % 1) * 1000);
+                _totalMilliseconds = _totalSeconds * 1000 + _milliseconds;
+                _totalMinutes = _totalSeconds / 60;
+                
+                _seconds = _totalSeconds % 60;
+                _minutes = _totalMinutes % 60;
+                _hours = _totalMinutes / 60;
+                break;
+            case TimeCodeUnit.Millisecond:
+                throw new ArgumentOutOfRangeException(nameof(timeCodeUnit), timeCodeUnit, null);
+        }
+        
+        if (updateFormatString)
+            UpdateFormattedString();
+    }
+    
     /// <summary>
     /// Creates a new <see cref="TimeCode"/> object from a string
     /// </summary>
@@ -350,6 +400,7 @@ public partial class TimeCode
     
     private void UpdateFormattedString()
     {
+        CalculateFrameNumber();
         _formattedString = StringFormat switch
         {
             TimeCodeFormat.Basic =>
