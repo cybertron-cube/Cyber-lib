@@ -10,61 +10,11 @@ namespace Cybertron.CUpdater;
 
 public class Updater
 {
-    public const string UnixScript =
-        """
-        #!/bin/sh
-        
-        set -e
-        
-        SCRIPT_PATH="$0"
-        UPDATER_PATH="$1"
-        UPDATER_DIR=$( dirname "$UPDATER_PATH" )
-        UPDATER_DIR_DIR=$( dirname "$UPDATER_DIR" )
-        
-        "$UPDATER_PATH" "$@"
-        
-        rm -rf "$UPDATER_DIR"
-        mv "$UPDATER_DIR_DIR/updater_new" "$UPDATER_DIR_DIR/updater"
-        
-        rm -- "$SCRIPT_PATH"
-        
-        """;
+    private const string UnixScriptUrl =
+        "https://raw.githubusercontent.com/cybertron-cube/Cyber-lib/refs/heads/main/UpdaterScripts/UnixScript.sh";
     
-    // scriptPath, updaterPath, ...
-    public const string WindowsScript =
-        """
-        $ErrorActionPreference = "Stop"
-        
-        $SCRIPT_PATH = $MyInvocation.MyCommand.Path
-        $UPDATER_PATH = $args[0]
-        $UPDATER_DIR = Split-Path -Parent "$UPDATER_PATH"
-        $UPDATER_DIR_DIR = Split-Path -Parent "$UPDATER_DIR"
-        $APP_TO_LAUNCH = $args[4]
-        
-        function QuoteArgument {
-            param (
-                [string]$arg
-            )
-            
-            return "`"$arg`""
-        }
-        
-        $quotedArgs = $args | ForEach-Object { QuoteArgument $_ }
-        
-        Start-Process -FilePath "$UPDATER_PATH" -Verb RunAs -ArgumentList $quotedArgs -Wait
-        
-        $code = @"
-        Remove-Item -Path `"`"`"$UPDATER_DIR`"`"`" -Recurse -Force
-        Move-Item -Path `"`"`"$UPDATER_DIR_DIR\updater_new`"`"`" -Destination `"`"`"$UPDATER_DIR_DIR\updater`"`"`" -Force
-        "@
-        
-        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList "-Command", "$code" -WindowStyle Hidden -Wait
-        
-        & "$APP_TO_LAUNCH"
-        
-        Remove-Item -Path "$SCRIPT_PATH" -Force
-        
-        """;
+    private const string WindowsScriptUrl =
+        "https://raw.githubusercontent.com/cybertron-cube/Cyber-lib/refs/heads/main/UpdaterScripts/WindowsScript.ps1";
     
     public event Action<string>? OnNextFile;
 
@@ -148,9 +98,11 @@ public class Updater
     /// <param name="extractDestination">Where to extract the archive downloaded from the link</param>
     /// <param name="wildCardPreserve">Range of file names to preserve when extracting (separate multiple entries with ';')</param>
     /// <param name="preservables">Specific file names to preserve when extracting</param>
+    /// <param name="updaterScriptLogFilePath">Log path for updater script to output to</param>
+    /// <param name="httpClient"></param>
     /// <returns>Path to a temporary updater script</returns>
     /// <exception cref="NullReferenceException"></exception>
-    public static string StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables)
+    public static async Task<string> StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables, string? updaterScriptLogFilePath = null, HttpClient? httpClient = null)
     {
         string? appToLaunch;
         string procName;
@@ -165,6 +117,8 @@ public class Updater
         
         var scriptPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         
+        httpClient ??= new HttpClient();
+        
         ProcessStartInfo processStartInfo;
         if (OperatingSystem.IsWindows())
         {
@@ -174,11 +128,16 @@ public class Updater
                 CreateNoWindow = true
             };
             
+            processStartInfo.Arguments += "-NoProfile -ExecutionPolicy Bypass -File ";
+            
+            var windowsScript = await httpClient.GetStringAsync(WindowsScriptUrl);
+            windowsScript = windowsScript.Replace("|PathToScriptLogFile|", updaterScriptLogFilePath);
+            
             // Make windows happy ;)
             // Otherwise there will be a prompt for associating a file extension
             scriptPath = Path.ChangeExtension(scriptPath, "ps1");
             
-            File.WriteAllText(scriptPath, WindowsScript);
+            await File.WriteAllTextAsync(scriptPath, windowsScript);
         }
         else
         {
@@ -187,11 +146,14 @@ public class Updater
                 FileName = "/bin/sh"
             };
             
-            File.WriteAllText(scriptPath, UnixScript);
+            var unixScript = await httpClient.GetStringAsync(UnixScriptUrl);
+            unixScript = unixScript.Replace("|PathToScriptLogFile|", updaterScriptLogFilePath);
+            
+            await File.WriteAllTextAsync(scriptPath, unixScript);
         }
         
         //-noexit
-        processStartInfo.Arguments = $"\"{scriptPath}\"";
+        processStartInfo.Arguments += $"\"{scriptPath}\"";
         
         var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
             preservables.ToListWithCast());
