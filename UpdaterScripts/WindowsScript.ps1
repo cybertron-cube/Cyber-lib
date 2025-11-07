@@ -21,6 +21,7 @@ Write-Host "APP_TO_LAUNCH: $APP_TO_LAUNCH"
 
 $argPath = "`"`"$($args[0])`"`""
 
+Write-Host "Launching updater application"
 Start-Process -FilePath $UPDATER_PATH -Wait -Verb RunAs -ArgumentList $argPath
 
 $code = @"
@@ -28,9 +29,14 @@ Remove-Item -Path `"`"`"$UPDATER_DIR`"`"`" -Recurse -Force
 Move-Item -Path `"`"`"$UPDATER_DIR_DIR\updater_new`"`"`" -Destination `"`"`"$UPDATER_DIR_DIR\updater`"`"`" -Force
 "@
 
+Write-Host "Launching cleanup script"
 Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList "-Command", "$code" -WindowStyle Hidden -Wait
 
+Write-Host "Launching application"
 & $APP_TO_LAUNCH
 
-Remove-Item -Path $argPath -Force
+Write-Host "Removing json file"
+Remove-Item -Path $args[0] -Force
+
+Write-Host "Removing updater script"
 Remove-Item -Path $SCRIPT_PATH -Force
