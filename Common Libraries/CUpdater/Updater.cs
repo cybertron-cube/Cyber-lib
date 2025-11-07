@@ -135,9 +135,7 @@ public class Updater
             processStartInfo.ArgumentList.Add("Bypass");// += " -ExecutionPolicy Bypass -File ";
             processStartInfo.ArgumentList.Add("-File");// += " -ExecutionPolicy Bypass -File ";
             
-            //var windowsScript = await httpClient.GetStringAsync(WindowsScriptUrl);
-            var windowsScript =
-                await File.ReadAllTextAsync(@"C:\Repositories\cyber-lib\UpdaterScripts\WindowsScript.ps1");
+            var windowsScript = await httpClient.GetStringAsync(WindowsScriptUrl);
             windowsScript = windowsScript.Replace("|PathToScriptLogFile|", updaterScriptLogFilePath);
             
             // Make windows happy ;)
