@@ -1,21 +1,34 @@
 ﻿using Avalonia;
 using System;
+using System.IO;
 
-namespace UpdaterAvalonia
+namespace UpdaterAvalonia;
+
+internal class Program
 {
-    internal class Program
+    // Initialization code. Don't use any Avalonia, third-party APIs or any
+    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
+    // yet and stuff might break.
+    [STAThread]
+    public static void Main(string[] args)
     {
-        // Initialization code. Don't use any Avalonia, third-party APIs or any
-        // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-        // yet and stuff might break.
-        [STAThread]
-        public static void Main(string[] args) => BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        AppDomain.CurrentDomain.UnhandledException += OnExit;
 
-        // Avalonia configuration, don't remove; also used by visual designer.
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .LogToTrace();
+        BuildAvaloniaApp()
+            .StartWithClassicDesktopLifetime(args);
+            
+        return;
+
+        void OnExit(object sender, UnhandledExceptionEventArgs e)
+        {
+            var path = Path.Combine(Path.GetTempPath(), "CybertronUpdaterError.log");
+            File.WriteAllText(path, e.ExceptionObject.ToString());
+        }
     }
+
+    // Avalonia configuration, don't remove; also used by visual designer.
+    public static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .LogToTrace();
 }

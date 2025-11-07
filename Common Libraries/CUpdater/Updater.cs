@@ -5,6 +5,7 @@ using Cybertron.CUpdater.Github;
 using System.Diagnostics;
 using System.Formats.Tar;
 using System.Runtime.Versioning;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Cybertron.CUpdater;
 
@@ -102,7 +103,7 @@ public class Updater
     /// <param name="httpClient"></param>
     /// <returns>Path to a temporary updater script</returns>
     /// <exception cref="NullReferenceException"></exception>
-    public static async Task<string> StartUpdater(string updaterPath, string downloadLink, string extractDestination, string wildCardPreserve, IEnumerable<string> preservables, string? updaterScriptLogFilePath = null, HttpClient? httpClient = null)
+    public static async Task<string> StartUpdater(string updaterPath, string downloadLink, string extractDestination, IEnumerable<string> wildCardPreserve, IEnumerable<string> preservables, string? updaterScriptLogFilePath = null, HttpClient? httpClient = null)
     {
         string? appToLaunch;
         string procName;
@@ -116,6 +117,7 @@ public class Updater
             throw new NullReferenceException("Could not obtain filename from process main module");
         
         var scriptPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var jsonPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         
         httpClient ??= new HttpClient();
         
@@ -128,9 +130,14 @@ public class Updater
                 CreateNoWindow = true
             };
             
-            processStartInfo.Arguments += "-NoProfile -ExecutionPolicy Bypass -File ";
+            processStartInfo.ArgumentList.Add("-NoProfile");// += " -ExecutionPolicy Bypass -File ";
+            processStartInfo.ArgumentList.Add("-ExecutionPolicy");// += " -ExecutionPolicy Bypass -File ";
+            processStartInfo.ArgumentList.Add("Bypass");// += " -ExecutionPolicy Bypass -File ";
+            processStartInfo.ArgumentList.Add("-File");// += " -ExecutionPolicy Bypass -File ";
             
-            var windowsScript = await httpClient.GetStringAsync(WindowsScriptUrl);
+            //var windowsScript = await httpClient.GetStringAsync(WindowsScriptUrl);
+            var windowsScript =
+                await File.ReadAllTextAsync(@"C:\Repositories\cyber-lib\UpdaterScripts\WindowsScript.ps1");
             windowsScript = windowsScript.Replace("|PathToScriptLogFile|", updaterScriptLogFilePath);
             
             // Make windows happy ;)
@@ -153,12 +160,16 @@ public class Updater
         }
         
         //-noexit
-        processStartInfo.Arguments += $"\"{scriptPath}\"";
+        processStartInfo.ArgumentList.Add(scriptPath);
         
-        var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch, wildCardPreserve,
-            preservables.ToListWithCast());
+        var args = new UpdaterArgs(updaterPath, procName, downloadLink, extractDestination, appToLaunch,
+            wildCardPreserve,
+            preservables);
+
+        var json = JsonSerializer.Serialize(args, UpdaterArgsJsonContext.Default.UpdaterArgs);
+        await File.WriteAllTextAsync(jsonPath, json);
         
-        ArgsHelper.AddToProcessStartInfo(processStartInfo, args);
+        processStartInfo.ArgumentList.Add(jsonPath);
         
         Process.Start(processStartInfo);
 

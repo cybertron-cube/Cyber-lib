@@ -18,6 +18,8 @@ public partial class MainWindow : Window
     public readonly HttpClient HttpClient = new();
     public readonly string DownloadPath = Path.GetTempFileName();
     public UpdaterArgs UpdaterArgs;
+
+    private List<string> _allIgnore;
     
     public MainWindow()
     {
@@ -59,21 +61,21 @@ public partial class MainWindow : Window
             }
             
             var dirInfo = new DirectoryInfo(UpdaterArgs.ExtractDestination);
-            if (UpdaterArgs.WildCardPreserve != string.Empty)
+            _allIgnore = new List<string>(UpdaterArgs.Preservables);
+            if (UpdaterArgs.WildCardPreserve.Any())
             {
-                var wildcardPreserves = UpdaterArgs.WildCardPreserve.Split(';');
-                foreach (var searchPattern in wildcardPreserves)
+                foreach (var searchPattern in UpdaterArgs.WildCardPreserve)
                 {
                     var addFiles = dirInfo.EnumerateFiles(searchPattern, SearchOption.AllDirectories);
                     foreach (var addFile in addFiles)
                     {
-                        UpdaterArgs.Preservables.Add(GenStatic.GetRelativePathFromFull(UpdaterArgs.ExtractDestination, addFile.FullName));
+                        _allIgnore.Add(GenStatic.GetRelativePathFromFull(UpdaterArgs.ExtractDestination, addFile.FullName));
                     }
                 }
             }
             
             var debug = UpdaterArgs + Environment.NewLine + "--IGNORABLES--" + Environment.NewLine
-                        + string.Join(Environment.NewLine, UpdaterArgs.Preservables) + Environment.NewLine + procEx
+                        + string.Join(Environment.NewLine, _allIgnore) + Environment.NewLine + procEx
                         + Environment.NewLine;
             
             await File.WriteAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"), debug);
@@ -87,7 +89,7 @@ public partial class MainWindow : Window
             UILabel.Text = "Removing files...";
             var intersect = dirInfo
                 .EnumerateFiles("*", searchOption: SearchOption.AllDirectories)
-                .ExceptBy(UpdaterArgs.Preservables, x => x.Name)
+                .ExceptBy(_allIgnore, x => x.Name)
                 .ToArray();
             var total = intersect.Length;
             for (int i = 0; i < total; i++)
@@ -113,7 +115,7 @@ public partial class MainWindow : Window
             await updater.ExtractToDirectoryProgressAsync(
                 DownloadPath,
                 UpdaterArgs.ExtractDestination,
-                UpdaterArgs.Preservables,
+                _allIgnore,
                 new ThreadSafeProgress<double>(x => UIProgress.Value = x));
 
             // Remove archive file, start process, then exit
@@ -134,7 +136,7 @@ public partial class MainWindow : Window
             File.Delete(DownloadPath);
             
             var debug = UpdaterArgs + Environment.NewLine + "--IGNORABLES--" + Environment.NewLine
-                        + string.Join(Environment.NewLine, UpdaterArgs.Preservables) + Environment.NewLine + ex
+                        + string.Join(Environment.NewLine, _allIgnore) + Environment.NewLine + ex
                         + Environment.NewLine;
             
             await File.AppendAllTextAsync(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater.log"), 
